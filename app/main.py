@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from routes import router
+from routes.userRoutes import router
 from config import engine
-from models import Base
+from models.userModel import Base
 
 app = FastAPI()
 app.include_router(router)

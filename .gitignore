@@ -1,1 +1,21 @@
-.env
+# Virtual environments
+venv/
+.env/
+
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor files
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Outros arquivos temporários
+*.tmp
+.DS_Store
