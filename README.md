@@ -5,27 +5,26 @@ Este é o backend do projeto desenvolvido em **FastAPI** com **PostgreSQL** para
 ---
 
 ## **Pré-requisitos**
-Certifique-se de que tem os seguintes itens instalados no seu sistema:
+Certifica-te de que tem os seguintes itens instalados no seu sistema:
 - **Python 3.8+**
 - **PostgreSQL**
 - **Git**
-- **Pip** (gerenciador de pacotes do Python)
 
 ---
 
 ## **Como Configurar o Projeto**
 
-### **1. Clone o Repositório**
-Primeiro, fazer clone do repositório para a máquina local.
+### **1. Clone do Repositório**
+Primeiro, faz clone do repositório para a máquina local.
 
 ### **2. Cria um ambiente Virtual**
-Cria e ativa um ambiente Virtual para gerir as dependencias
+Cria e ativa um ambiente virtual para gerir as dependencias
 ```bash 
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### **3. Instalar as dependências**
+### **3. Instala as dependências**
 Com o ambiente virtual ativado, instala as dependências do projeto:
 ```bash 
 pip install -r requirements.txt
