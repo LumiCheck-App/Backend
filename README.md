@@ -55,14 +55,14 @@ O servidor estará disponível em http://127.0.0.1:8000.
 ```bash
  backend/
 ├── app/
-│   ├── __init__.py      # Inicialização do app
-│   ├── models.py        # Modelos (dados)
-│   ├── routes.py        # Rotas/endpoints
-│   ├── config.py        # Configuração (PostgreSQL, etc.)
-│   ├── main.py          # Ponto de entrada
-├── .env                 # Variáveis de ambiente
-├── requirements.txt     # Dependências
-├── venv/                # Ambiente virtual
+│   ├── __init__.py      
+│   ├── models/          
+│   ├── routes/         
+│   ├── config.py        
+│   ├── main.py          
+├── .env                 
+├── requirements.txt     
+├── venv/                
 ```
 
 

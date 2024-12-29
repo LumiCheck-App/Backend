@@ -9,9 +9,6 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.get("/")
-def home():
-    return {"message": "Backend iniciado com FastAPI e PostgreSQL"}
 
 @router.post("/register")
 def register(
@@ -23,18 +20,18 @@ def register(
     onboarding: bool = False, 
     db: Session = Depends(get_db)
 ):
-    # Validar o campo 'type'
+    # Valida o campo 'type'
     if type not in ["direct", "surrogate"]:
         raise HTTPException(status_code=400, detail="Invalid type. Must be 'direct' or 'surrogate'.")
 
-    # Verificar se o email ou username já existem
+    # Verifica se o email ou username já existem
     existing_user = db.query(User).filter((User.email == email) | (User.username == username)).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
     hashed_password = hash_password(password)
 
-    # Criar um novo utilizador
+    # Cria um novo user
     user = User(
         username=username,
         email=email,
@@ -57,12 +54,12 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/users") #Lista todos os users
+@router.get("/")
 def list_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
 
-@router.delete("/users/{user_id}") #Apaga o utilizador pelo seu id
+@router.delete("/{user_id}") 
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -83,7 +80,7 @@ class UserUpdate(BaseModel):
     idade: int = None
     onboarding: bool = None
 
-@router.put("/users/{user_id}") #Edita o user pelo id. Caso não queiramos alterar algo, basta colocar igual
+@router.put("/{user_id}")
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
