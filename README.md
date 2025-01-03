@@ -42,7 +42,7 @@ source venv/bin/activate
 ### **2. Executa o Servidor**
 Para iniciar o servidor, execute:
 ```bash
-python app/main.py
+python3 app/main.py
 ```
 O servidor estará disponível em http://127.0.0.1:8000.
 
