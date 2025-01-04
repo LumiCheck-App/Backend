@@ -9,12 +9,12 @@ Aqui está presente a lista de tarefas e notas
     - Fazer CRUD
     - Como ligo à tabela user_has_tarefas
 - Criar tabela Trofeus
-    - Fazer CRUD
-    - Como ligo à tabela user_has_trofeus
+    - Fazer CRUD **Feito**
+    - Como ligo à tabela user_has_trofeus **Feito**
     - Aqui tenho que fazer a lógica de X tarefas desbloqueiam 1 troféu
 - Criar tabela dependencias **Feito**
     - Fazer CRUD
     - Como ligo à tabela dependencias
-- Criar tabela Perguntas
+- Criar tabela Perguntas **Feito**
     - Fazer CRUD
     - Como ligo à tabela user_has_perguntas
