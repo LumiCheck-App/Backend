@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, ForeignKey
-from config import Base
+from app.config import Base
 
 class UserDependenciaStatus(Base):
     __tablename__ = "users_has_dependencias"
