@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from app.config import Base
+from config import Base
 
 class Dependencia(Base):
     __tablename__ = "dependencia"

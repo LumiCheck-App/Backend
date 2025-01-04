@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from app.config import Base
+from config import Base
 
 class Trofeu(Base):
     __tablename__ = "trofeus"
