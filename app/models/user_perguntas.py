@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, ForeignKey
-from config import Base
+from app.config import Base
 
 class UserPerguntaStatus(Base):
     __tablename__ = "users_perguntas_status"
