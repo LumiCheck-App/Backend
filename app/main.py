@@ -6,6 +6,9 @@ from app.routes.trofeusRoutes import router as trofeus_router
 from app.routes.perguntasRoutes import router as perguntas_router
 from app.config import engine
 from app.models.userModel import Base
+from app import main
+import uvicorn
+import os
 
 
 app = FastAPI()
@@ -17,5 +20,5 @@ app.include_router(perguntas_router, prefix="/perguntas", tags=["Perguntas"])
 Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 1234))  # Porta padrão fornecida pelo Railway
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
