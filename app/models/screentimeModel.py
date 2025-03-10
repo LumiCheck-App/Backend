@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
-from app.config import Base
+from config import Base
 from sqlalchemy.sql import func
 
 class ScreenTime(Base):

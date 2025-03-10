@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.models.userModel import User
-from app.models.digitalHabitModel import DigitalHabit
-from app.models.userDigitalHabitModel import UserDigitalHabitStatus
+from models.userModel import User
+from models.digitalHabitModel import DigitalHabit
+from models.userDigitalHabitModel import UserDigitalHabitStatus
 from config import get_db
 
 router = APIRouter()
@@ -22,7 +22,7 @@ def list_digital_habits(db: Session = Depends(get_db)):
     return db.query(DigitalHabit).all()
 
 # Associa um hábito digital a um utilizador
-@router.post("/{user_id}/digital-habits/{habit_id}")
+@router.post("/{user_id}/{habit_id}")
 def associate_digital_habit(user_id: int, habit_id: int, db: Session = Depends(get_db)):
     # Verifica se o hábito existe
     habit = db.query(DigitalHabit).filter_by(id=habit_id).first()
@@ -40,7 +40,7 @@ def associate_digital_habit(user_id: int, habit_id: int, db: Session = Depends(g
     return {"message": "Digital habit is already associated with user"}
 
 # Remove a associação de um hábito digital a um utilizador
-@router.delete("/{user_id}/digital-habits/{habit_id}")
+@router.delete("/{user_id}/{habit_id}")
 def remove_digital_habit(user_id: int, habit_id: int, db: Session = Depends(get_db)):
     # Verifica se já está associado
     status = db.query(UserDigitalHabitStatus).filter_by(id_user=user_id, id_digital_habit=habit_id).first()
@@ -52,7 +52,7 @@ def remove_digital_habit(user_id: int, habit_id: int, db: Session = Depends(get_
     return {"message": "Digital habit successfully removed from user"}
 
 # Lista os hábitos digitais associados a um utilizador
-@router.get("/{user_id}/digital-habits")
+@router.get("/{user_id}")
 def list_associated_digital_habits(user_id: int, db: Session = Depends(get_db)):
     habits = (
         db.query(DigitalHabit)

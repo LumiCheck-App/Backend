@@ -1,19 +1,21 @@
 from fastapi import FastAPI
 from routes.userRoutes import router as user_router
-from routes.tarefasRoutes import router as tarefas_router
-from app.routes.digitalHabitRoutes import router as dependencias_router
-from routes.trofeusRoutes import router as trofeus_router
-from app.routes.questionRoutes import router as perguntas_router
+from routes.taskRoutes import router as task_router
+from routes.digitalHabitRoutes import router as digital_habit_router
+from routes.achievementRoutes import router as achievement_router
+from routes.questionRoutes import router as question_router
+from routes.screentimeRoutes import router as screen_time_router
 from config import engine
 from models.userModel import Base
 
 
 app = FastAPI()
-app.include_router(user_router, prefix="/users", tags=["Users"])
-app.include_router(tarefas_router, prefix="/tarefas", tags=["Tarefas"])
-app.include_router(dependencias_router,prefix="/dependencias", tags=["Dependências"])
-app.include_router(trofeus_router, prefix="/trofeus", tags=["Troféus"])
-app.include_router(perguntas_router, prefix="/perguntas", tags=["Perguntas"])
+app.include_router(user_router, prefix="/user", tags=["User"])
+app.include_router(task_router, prefix="/task", tags=["Task"])
+app.include_router(digital_habit_router,prefix="/digital-habits", tags=["Digital Habit"])
+app.include_router(achievement_router, prefix="/achievement", tags=["Achievement"])
+app.include_router(question_router, prefix="/question", tags=["Question"])
+app.include_router(screen_time_router, prefix="/screentime", tags=["Screen Time"])
 Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":

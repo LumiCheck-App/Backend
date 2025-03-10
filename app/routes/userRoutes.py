@@ -1,43 +1,39 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from models.userModel import User
-from utils import hash_password
-from utils import verify_password
+from utils import hash_password, verify_password
 from auth import create_access_token, get_current_user
 from config import get_db
 from pydantic import BaseModel
 
 router = APIRouter()
 
+class UserUpdate(BaseModel):
+    username: str = None
+    email: str = None
+    password: str = None
+    onboarding: bool = None
 
 @router.post("/register")
 def register(
     username: str,
     email: str,
     password: str,
-    type: str,  # Tipo do utilizador (deve ser "direct" ou "surrogate")
-    idade: int, 
-    onboarding: bool = False, 
+    onboarding: bool = False,
     db: Session = Depends(get_db)
 ):
-    # Valida o campo 'type'
-    if type not in ["direct", "surrogate"]:
-        raise HTTPException(status_code=400, detail="Invalid type. Must be 'direct' or 'surrogate'.")
-
-    # Verifica se o email ou username já existem
+    # Check if the email or username already exists
     existing_user = db.query(User).filter((User.email == email) | (User.username == username)).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
     hashed_password = hash_password(password)
 
-    # Cria um novo user
+    # Create a new user
     user = User(
         username=username,
         email=email,
         password=hashed_password,
-        type=type,
-        idade=idade,
         onboarding=onboarding
     )
     db.add(user)
@@ -56,8 +52,7 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
 
 @router.get("/")
 def list_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
+    return db.query(User).all()
 
 @router.delete("/{user_id}") 
 def delete_user(user_id: int, db: Session = Depends(get_db)):
@@ -72,33 +67,19 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 def protected_route(current_user: str = Depends(get_current_user)):
     return {"message": f"Hello, {current_user}!"}
 
-class UserUpdate(BaseModel):
-    username: str = None
-    email: str = None
-    password: str = None
-    type: str = None
-    idade: int = None
-    onboarding: bool = None
-
 @router.put("/{user_id}")
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Atualiza apenas os campos fornecidos
+    # Update only provided fields
     if user_update.username:
         user.username = user_update.username
     if user_update.email:
         user.email = user_update.email
     if user_update.password:
-        user.password = hash_password(user_update.password) 
-    if user_update.type:
-        if user_update.type not in ["direct", "surrogate"]:
-            raise HTTPException(status_code=400, detail="Invalid type. Must be 'direct' or 'surrogate'.")
-        user.type = user_update.type
-    if user_update.idade:
-        user.idade = user_update.idade
+        user.password = hash_password(user_update.password)
     if user_update.onboarding is not None:
         user.onboarding = user_update.onboarding
 

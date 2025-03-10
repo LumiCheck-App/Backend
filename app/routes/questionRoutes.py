@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.models.questionModel import Question
-from app.models.questionStatusModel import UserQuestionAsnwer
+from models.questionModel import Question
+from models.questionStatusModel import UserQuestionAsnwer
 from config import get_db
 
 router = APIRouter()
