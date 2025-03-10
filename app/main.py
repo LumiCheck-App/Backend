@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from app.routes.userRoutes import router as user_router
-from app.routes.tarefasRoutes import router as tarefas_router
-from app.routes.dependenciasRoutes import router as dependencias_router
-from app.routes.trofeusRoutes import router as trofeus_router
-from app.routes.perguntasRoutes import router as perguntas_router
-from app.config import engine
-from app.models.userModel import Base
+from routes.userRoutes import router as user_router
+from routes.tarefasRoutes import router as tarefas_router
+from app.routes.digitalHabitRoutes import router as dependencias_router
+from routes.trofeusRoutes import router as trofeus_router
+from app.routes.questionRoutes import router as perguntas_router
+from config import engine
+from models.userModel import Base
 
 
 app = FastAPI()

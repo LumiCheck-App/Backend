@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.models.userModel import User
-from app.models.tarefasModel import Tarefa
-from app.models.dependenciaModel import Dependencia
-from app.models.status_tarefaModel import UserTarefaStatus
-from app.models.user_dependenciasModel import UserDependenciaStatus
-from app.models.trofeuModel import Trofeu
-from app.models.status_trofeuModel import UserTrofeuStatus
-from app.config import get_db
+from models.userModel import User
+from app.models.taskModel import Tarefa
+from app.models.digitalHabitModel import Dependencia
+from app.models.taskStatusModel import UserTarefaStatus
+from app.models.userDigitalHabitModel import UserDependenciaStatus
+from app.models.achievementModel import Trofeu
+from app.models.achievementStatusModel import UserTrofeuStatus
+from config import get_db
 
 router = APIRouter()
 

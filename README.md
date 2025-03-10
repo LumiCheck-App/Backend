@@ -8,6 +8,7 @@ Este é o backend do projeto desenvolvido em **FastAPI** com **PostgreSQL** para
 Certifica-te de que tem os seguintes itens instalados no seu sistema:
 - **Python 3.8+**
 - **PostgreSQL**
+- **TimeScaleDB**
 - **Git**
 
 ---
@@ -24,7 +25,20 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### **3. Instala as dependências**
+### **3. Criar um user e base de dados**
+Executa:
+```bash
+sudo -u postgres psql
+```
+Depois cria o user e a base de dados:
+```sql
+CREATE USER admin WITH PASSWORD '1234';
+ALTER USER admin CREATEDB;
+CREATE DATABASE lumicheck OWNER admin;
+\q
+```
+
+### **4. Instala as dependências**
 Com o ambiente virtual ativado, instala as dependências do projeto:
 ```bash 
 pip install -r requirements.txt
