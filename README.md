@@ -1,6 +1,6 @@
 # **Backend do Projeto com FastAPI e PostgreSQL**
 
-Este é o backend do projeto desenvolvido em **FastAPI** com **PostgreSQL** para gestão de dados. Este guia descreve como configurar o ambiente, executar o projeto e começar a desenvolver.
+Este é o backend do projeto desenvolvido em **FastAPI** com **PostgreSQL**, **Alembic** e **TimeScaleDB** para gestão de dados. Este guia descreve como configurar o ambiente, executar o projeto e começar a desenvolver.
 
 ---
 
