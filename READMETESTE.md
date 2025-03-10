@@ -108,7 +108,13 @@ Certifica-te de que o ambiente virtual está ativo:
 source venv/bin/activate
 ```
 
-### **2. Executar o Servidor**
+### **2. Popular a base de dados**
+Execute:
+```bash
+python3 app/seed.py
+```
+
+### **3. Executar o Servidor**
 Para iniciar o servidor, execute:
 ```bash
 python3 app/main.py

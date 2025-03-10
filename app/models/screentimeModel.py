@@ -10,7 +10,6 @@ class ScreenTime(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_user = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
-    usage_data = Column(JSONB, nullable=False)  
+    usage_data = Column(JSONB, nullable=False)
 
-    user = relationship("User", back_populates="screentimes")
-
+    user = relationship("User", back_populates="screentimes")  # Aqui, usar "User" como string
