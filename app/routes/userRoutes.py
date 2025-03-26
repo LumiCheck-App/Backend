@@ -14,6 +14,10 @@ class UserUpdate(BaseModel):
     password: str = None
     onboarding: bool = None
 
+class RequestUser(BaseModel):
+    username: str
+    password: str
+
 @router.post("/register")
 def register(
     username: str,
@@ -43,12 +47,12 @@ def register(
     return {"message": "User registered successfully", "user_id": user.id}
 
 @router.post("/login")
-def login(username: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not verify_password(password, user.password):
+def login(requestUser: RequestUser, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == requestUser.username).first()
+    if not user or not verify_password(requestUser.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid username or password")
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
 
 @router.get("/")
 def list_users(db: Session = Depends(get_db)):
