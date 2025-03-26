@@ -4,13 +4,17 @@ from models.userModel import User
 from models.taskModel import Task
 from models.taskStatusModel import UserTaskStatus
 from config import get_db
+from pydantic import BaseModel
 
 router = APIRouter()
 
+class TaskCreate(BaseModel):
+    description: str
+
 # Cria uma nova tarefa
 @router.post("/create")
-def create_task(description: str, db: Session = Depends(get_db)):
-    new_task = Task(description=description)
+def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+    new_task = Task(description=task.description)
     db.add(new_task)
     db.commit()
     db.refresh(new_task)

@@ -4,13 +4,17 @@ from models.userModel import User
 from models.digitalHabitModel import DigitalHabit
 from models.userDigitalHabitModel import UserDigitalHabitStatus
 from config import get_db
+from pydantic import BaseModel
 
 router = APIRouter()
 
+class DigitalHabitCreate(BaseModel):
+    name: str
+
 # Cria um novo hábito digital
 @router.post("/create")
-def create_digital_habit(name: str, db: Session = Depends(get_db)):
-    new_habit = DigitalHabit(name=name)
+def create_digital_habit(body: DigitalHabitCreate, db: Session = Depends(get_db)):
+    new_habit = DigitalHabit(name=body.name)
     db.add(new_habit)
     db.commit()
     db.refresh(new_habit)
