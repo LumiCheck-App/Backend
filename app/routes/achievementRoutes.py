@@ -8,8 +8,16 @@ from models.userDigitalHabitModel import UserDigitalHabitStatus
 from models.achievementModel import Achievement
 from models.achievementStatusModel import UserAchievementStatus
 from config import get_db
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
+
+class AchievementCreate(BaseModel):
+    name: str
+    description: str
+    tag: str
+    image: Optional[str] = None
 
 # Lista os trofeus
 @router.get("/")
@@ -18,8 +26,8 @@ def list_achievements(db: Session = Depends(get_db)):
 
 # Cria um novo trofeu
 @router.post("/create")
-def create_achievement(name: str, description: str, tag: str, image: str = None, db: Session = Depends(get_db)):
-    new_achievement = Achievement(name=name, description=description, tag=tag, image=image)
+def create_achievement(achievement_data: AchievementCreate, db: Session = Depends(get_db)):
+    new_achievement = Achievement(name=achievement_data.name, description=achievement_data.description, tag=achievement_data.tag, image=achievement_data.image)
     db.add(new_achievement)
     db.commit()
     db.refresh(new_achievement)
