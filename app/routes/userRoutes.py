@@ -18,27 +18,33 @@ class RequestUser(BaseModel):
     username: str
     password: str
 
+class RegisterUser(BaseModel):
+    username: str
+    email: str
+    password: str
+    onboarding: bool = False
+
 @router.post("/register")
 def register(
-    username: str,
-    email: str,
-    password: str,
-    onboarding: bool = False,
+    user_data: RegisterUser,  # Agora espera um JSON
     db: Session = Depends(get_db)
 ):
-    # Check if the email or username already exists
-    existing_user = db.query(User).filter((User.email == email) | (User.username == username)).first()
+    # Verifica se o usuário já existe
+    existing_user = db.query(User).filter(
+        (User.email == user_data.email) | (User.username == user_data.username)
+    ).first()
+    
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
-    hashed_password = hash_password(password)
+    hashed_password = hash_password(user_data.password)
 
-    # Create a new user
+    # Cria o novo usuário
     user = User(
-        username=username,
-        email=email,
+        username=user_data.username,
+        email=user_data.email,
         password=hashed_password,
-        onboarding=onboarding
+        onboarding=user_data.onboarding
     )
     db.add(user)
     db.commit()
