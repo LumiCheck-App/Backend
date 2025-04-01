@@ -30,7 +30,7 @@ def list_questions(db: Session = Depends(get_db)):
     return db.query(Question).all()
 
 # Atribui a resposta de um utilizador a uma pergunta
-@router.post("/asnwer")
+@router.post("/answer")
 def add_question_asnwer(body: QuestionAnswer, db: Session = Depends(get_db)):
     if not (0 <= body.answer <= 5):
         raise HTTPException(status_code=400, detail="Answer must be between 0 and 5")
