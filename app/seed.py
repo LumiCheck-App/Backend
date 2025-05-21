@@ -6,10 +6,10 @@ def seed_data():
     db = SessionLocal()
     print("Seeding database...")
 
-    # users = [
-    #     User(username="john_doe", email="john@example.com", password=hash_password("password123"), onboarding=True),
-    #     User(username="jane_doe", email="jane@example.com", password=hash_password("password123"), onboarding=False)
-    # ]
+    users = [
+        User(username="john_doe", email="john@example.com", password=hash_password("password123"), onboarding=True),
+        User(username="jane_doe", email="jane@example.com", password=hash_password("password123"), onboarding=False)
+    ]
     
      # Criar algumas tarefas
     tasks = [
@@ -30,8 +30,8 @@ def seed_data():
     ]
 
     # Inserir os dados na base de dados
-    # db.add_all(users + tasks + digital_habits + achievements)
-    db.add_all(tasks + digital_habits + achievements)
+    db.add_all(users + tasks + digital_habits + achievements)
+    # db.add_all(tasks + digital_habits + achievements)
     db.commit()
 
     print("Seeding completed successfully!")

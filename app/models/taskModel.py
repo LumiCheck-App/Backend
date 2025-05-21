@@ -4,4 +4,4 @@ from config import Base
 class Task(Base):
     __tablename__ = "task"
     id = Column(Integer, primary_key=True, index=True)
-    task = Column(String, nullable=False)
+    description = Column(String, nullable=False)

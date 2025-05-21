@@ -5,6 +5,7 @@ from models.taskModel import Task
 from models.taskStatusModel import UserTaskStatus
 from config import get_db
 from pydantic import BaseModel
+from datetime import datetime
 
 router = APIRouter()
 
@@ -47,12 +48,16 @@ def complete_task(task_id: int, user_id: int, db: Session = Depends(get_db)):
     # Verifica se o progresso do utilizador já está registrado
     status = db.query(UserTaskStatus).filter_by(id_user=user_id, id_task=task_id).first()
     if not status:
-        # Cria o registro se não existir
-        status = UserTaskStatus(id_user=user_id, id_task=task_id, done=True)
+        status = UserTaskStatus(
+            id_user=user_id,
+            id_task=task_id,
+            done=True,
+            completed_at=datetime.utcnow()
+        )
         db.add(status)
     else:
-        # Atualiza o estado para concluído
         status.done = True
+        status.completed_at = datetime.utcnow()
 
     db.commit()
     return {"message": "Task marked as completed"}
@@ -66,7 +71,15 @@ def list_completed_tasks(user_id: int, db: Session = Depends(get_db)):
         .filter(UserTaskStatus.id_user == user_id, UserTaskStatus.done == True)
         .all()
     )
-    return [{"id": task.id, "description": task.description} for task in completed_tasks]
+    return [
+        {"id": task.id, "description": task.description, "completed_at": status.completed_at}
+        for task, status in (
+            db.query(Task, UserTaskStatus)
+            .join(UserTaskStatus, UserTaskStatus.id_task == Task.id)
+            .filter(UserTaskStatus.id_user == user_id, UserTaskStatus.done == True)
+            .all()
+        )
+    ]
 
 # Mostra as tarefas de um utilizador (feitas ou não)
 @router.get("/{user_id}/status")
