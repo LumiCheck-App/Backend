@@ -29,13 +29,19 @@ def register(
     user_data: RegisterUser,  # Agora espera um JSON
     db: Session = Depends(get_db)
 ):
-    # Verifica se o usuário já existe
-    existing_user = db.query(User).filter(
-        (User.email == user_data.email) | (User.username == user_data.username)
+    # Verifica se o email já existe
+    existing_email = db.query(User).filter(
+        (User.email == user_data.email)
+    ).first()
+
+    existing_username = db.query(User).filter(
+        (User.username == user_data.username)
     ).first()
     
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username or email already exists")
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Este email já está em registado")
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Este username já está em registado")
 
     hashed_password = hash_password(user_data.password)
 
@@ -56,7 +62,7 @@ def register(
 def login(requestUser: RequestUser, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == requestUser.username).first()
     if not user or not verify_password(requestUser.password, user.password):
-        raise HTTPException(status_code=400, detail="Invalid username or password")
+        raise HTTPException(status_code=400, detail="Username ou password incorretos")
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer", "user": user}
 

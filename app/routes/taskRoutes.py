@@ -5,7 +5,9 @@ from models.taskModel import Task
 from models.taskStatusModel import UserTaskStatus
 from config import get_db
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime, time
+from sqlalchemy import and_
+
 
 router = APIRouter()
 
@@ -37,30 +39,35 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
 def list_tasks(db: Session = Depends(get_db)):
     return db.query(Task).all()
 
-# Marca uma tarefa como completa
-@router.post("/{task_id}/complete")
-def complete_task(task_id: int, user_id: int, db: Session = Depends(get_db)):
+@router.post("/{task_id}/{user_id}/toggle")
+def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db)):
     # Verifica se a tarefa existe
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Verifica se o progresso do utilizador já está registrado
-    status = db.query(UserTaskStatus).filter_by(id_user=user_id, id_task=task_id).first()
+    # Define intervalo do dia de hoje
+    today = date.today()
+    start_of_day = datetime.combine(today, time.min)
+    end_of_day = datetime.combine(today, time.max)
+
+    # Verifica se a tarefa está atribuída ao utilizador e é de hoje
+    status = db.query(UserTaskStatus).filter(
+        UserTaskStatus.id_user == user_id,
+        UserTaskStatus.id_task == task_id,
+        UserTaskStatus.completed_at >= start_of_day,
+        UserTaskStatus.completed_at <= end_of_day
+    ).first()
+
     if not status:
-        status = UserTaskStatus(
-            id_user=user_id,
-            id_task=task_id,
-            done=True,
-            completed_at=datetime.utcnow()
-        )
-        db.add(status)
-    else:
-        status.done = True
-        status.completed_at = datetime.utcnow()
+        raise HTTPException(status_code=400, detail="Task is not assigned for today")
+
+    # Atualiza como concluída
+    status.done = not status.done
+    status.completed_at = datetime.utcnow()
 
     db.commit()
-    return {"message": "Task marked as completed"}
+    return {"message": f"Task toggled to {status.done}"}
 
 # Mostra as tarefas concluidas por um utilizador
 @router.get("/{user_id}/completed")
@@ -81,20 +88,34 @@ def list_completed_tasks(user_id: int, db: Session = Depends(get_db)):
         )
     ]
 
-# Mostra as tarefas de um utilizador (feitas ou não)
-@router.get("/{user_id}/status")
-def list_tasks_with_status(user_id: int, db: Session = Depends(get_db)):
+# Mostra as tarefas diárias (de hoje) atribuídas a um utilizador
+@router.get("/{user_id}/dailystatus")
+def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db)):
+    today = date.today()
+    start_of_day = datetime.combine(today, time.min)
+    end_of_day = datetime.combine(today, time.max)
+
     tasks = (
         db.query(
             Task.id,
             Task.description,
             UserTaskStatus.done
         )
-        .outerjoin(UserTaskStatus, (UserTaskStatus.id_task == Task.id) & (UserTaskStatus.id_user == user_id))
+        .join(UserTaskStatus, and_(
+            UserTaskStatus.id_task == Task.id,
+            UserTaskStatus.id_user == user_id,
+            UserTaskStatus.completed_at >= start_of_day,
+            UserTaskStatus.completed_at <= end_of_day
+        ))
         .all()
     )
+
     return [
-        {"id": task.id, "description": task.description, "done": task.done if task.done is not None else False}
+        {
+            "id": task.id,
+            "description": task.description,
+            "done": task.done if task.done is not None else False,
+        }
         for task in tasks
     ]
 
