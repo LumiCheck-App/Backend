@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from models.userModel import User
 from utils import hash_password, verify_password
-from auth import create_access_token, get_current_user
+from auth import create_access_token, get_current_user, create_refresh_token
 from config import get_db
 from pydantic import BaseModel
+from jose import jwt, JWTError
+from fastapi import status
+from auth import SECRET_KEY, ALGORITHM
 
 router = APIRouter()
 
@@ -63,8 +66,33 @@ def login(requestUser: RequestUser, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == requestUser.username).first()
     if not user or not verify_password(requestUser.password, user.password):
         raise HTTPException(status_code=400, detail="Username ou password incorretos")
-    access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+    user_id = str(user.id)
+    access_token = create_access_token(data={"sub": user_id})
+    refresh_token = create_refresh_token(data={"sub": user_id})
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": user
+    }
+
+@router.post("/refresh")
+async def refresh_token(request: Request):
+    try:
+        body = await request.json()
+        refresh_token = body.get("refresh_token")
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
+
+        new_access_token = create_access_token(data={"sub": user_id})
+        return {"access_token": new_access_token}
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido")
+
 
 @router.get("/")
 def list_users(db: Session = Depends(get_db)):

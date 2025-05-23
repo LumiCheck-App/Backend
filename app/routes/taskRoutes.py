@@ -7,6 +7,8 @@ from config import get_db
 from pydantic import BaseModel
 from datetime import date, datetime, time
 from sqlalchemy import and_
+from socketio import AsyncServer
+from sockets_events import sio
 
 
 router = APIRouter()
@@ -40,18 +42,15 @@ def list_tasks(db: Session = Depends(get_db)):
     return db.query(Task).all()
 
 @router.post("/{task_id}/{user_id}/toggle")
-def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db)):
-    # Verifica se a tarefa existe
+async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db)):
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Define intervalo do dia de hoje
     today = date.today()
     start_of_day = datetime.combine(today, time.min)
     end_of_day = datetime.combine(today, time.max)
 
-    # Verifica se a tarefa está atribuída ao utilizador e é de hoje
     status = db.query(UserTaskStatus).filter(
         UserTaskStatus.id_user == user_id,
         UserTaskStatus.id_task == task_id,
@@ -62,10 +61,23 @@ def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get
     if not status:
         raise HTTPException(status_code=400, detail="Task is not assigned for today")
 
-    # Atualiza como concluída
     status.done = not status.done
     status.completed_at = datetime.utcnow()
 
+    completed_tasks_count = db.query(UserTaskStatus).filter(
+        UserTaskStatus.id_user == user_id,
+        UserTaskStatus.done == True
+    ).count()
+
+    if completed_tasks_count >= 20:
+        await sio.emit(
+            'trophy_unlocked',
+            {
+                "title": "Completou 20 tarefas!",
+                "description": "Você completou 20 tarefas. Continue assim! 💪"
+            },
+            room=f"user_{user_id}"
+        )
     db.commit()
     return {"message": f"Task toggled to {status.done}"}
 
