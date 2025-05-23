@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from models.userModel import User
 from models.taskModel import Task
 from models.taskStatusModel import UserTaskStatus
+from models.achievementModel import Achievement
+from models.achievementStatusModel import UserAchievementStatus
 from config import get_db
 from pydantic import BaseModel
 from datetime import date, datetime, time
@@ -62,22 +64,39 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
         raise HTTPException(status_code=400, detail="Task is not assigned for today")
 
     status.done = not status.done
-    status.completed_at = datetime.utcnow()
+    status.completed_at = datetime.now()
 
+    # Recontar tarefas completas
     completed_tasks_count = db.query(UserTaskStatus).filter(
         UserTaskStatus.id_user == user_id,
         UserTaskStatus.done == True
     ).count()
 
-    if completed_tasks_count >= 20:
-        await sio.emit(
-            'trophy_unlocked',
-            {
-                "title": "Completou 20 tarefas!",
-                "description": "Você completou 20 tarefas. Continue assim! 💪"
-            },
-            room=f"user_{user_id}"
-        )
+    # Verifica se já tem o troféu "marcodos20"
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'marcodos20'
+    ).first()
+
+    if completed_tasks_count >= 20 and not existing_achievement:
+        achievement = db.query(Achievement).filter_by(tag='marcodos20').first()
+        if achievement:
+            user_achievement = UserAchievementStatus(
+                id_user=user_id,
+                id_achievement=achievement.id,
+                done=True,
+                #achieved_at=datetime.now()
+            )
+            db.add(user_achievement)
+            await sio.emit(
+                'trophy_unlocked',
+                {
+                    "title": achievement.name,
+                    "description": achievement.description
+                },
+                room=f"user_{user_id}"
+            )
+
     db.commit()
     return {"message": f"Task toggled to {status.done}"}
 
