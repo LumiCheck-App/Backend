@@ -1,4 +1,4 @@
-from models import User, ScreenTime, Task, DigitalHabit, UserTaskStatus, UserDigitalHabitStatus, Achievement, UserAchievementStatus, Question, UserQuestionAsnwer
+from models import User, ScreenTime, Task, DigitalHabit, UserTaskStatus, UserDigitalHabitStatus, Achievement, UserAchievementStatus, Question, UserQuestionAnswer
 from config import SessionLocal
 from utils import hash_password
 

@@ -7,4 +7,4 @@ from models.userDigitalHabitModel import UserDigitalHabitStatus
 from models.achievementModel import Achievement
 from models.achievementStatusModel import UserAchievementStatus
 from models.questionModel import Question
-from models.questionStatusModel import UserQuestionAsnwer
+from models.questionStatusModel import UserQuestionAnswer

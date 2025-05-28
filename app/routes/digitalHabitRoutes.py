@@ -5,6 +5,7 @@ from models.digitalHabitModel import DigitalHabit
 from models.userDigitalHabitModel import UserDigitalHabitStatus
 from config import get_db
 from pydantic import BaseModel
+from typing import List
 
 router = APIRouter()
 
@@ -25,23 +26,28 @@ def create_digital_habit(body: DigitalHabitCreate, db: Session = Depends(get_db)
 def list_digital_habits(db: Session = Depends(get_db)):
     return db.query(DigitalHabit).all()
 
-# Associa um hábito digital a um utilizador
-@router.post("/{user_id}/{habit_id}")
-def associate_digital_habit(user_id: int, habit_id: int, db: Session = Depends(get_db)):
-    # Verifica se o hábito existe
-    habit = db.query(DigitalHabit).filter_by(id=habit_id).first()
-    if not habit:
-        raise HTTPException(status_code=404, detail="Digital habit not found")
+class HabitsAssociationRequest(BaseModel):
+    habit_ids: List[int]
 
-    # Verifica se já está associado
-    status = db.query(UserDigitalHabitStatus).filter_by(id_user=user_id, id_digital_habit=habit_id).first()
-    if not status:
-        status = UserDigitalHabitStatus(id_user=user_id, id_digital_habit=habit_id)
-        db.add(status)
-        db.commit()
-        return {"message": "Digital habit successfully associated with user"}
+@router.post("/{user_id}")
+def associate_digital_habits(user_id: int, body: HabitsAssociationRequest, db: Session = Depends(get_db)):
+    associated = 0
 
-    return {"message": "Digital habit is already associated with user"}
+    for habit_id in body.habit_ids:
+        # Verifica se o hábito existe
+        habit = db.query(DigitalHabit).filter_by(id=habit_id).first()
+        if not habit:
+            continue  # ignora IDs inválidos
+
+        # Verifica se já está associado
+        status = db.query(UserDigitalHabitStatus).filter_by(id_user=user_id, id_digital_habit=habit_id).first()
+        if not status:
+            status = UserDigitalHabitStatus(id_user=user_id, id_digital_habit=habit_id)
+            db.add(status)
+            associated += 1
+
+    db.commit()
+    return {"message": f"{associated} hábito(s) associados com sucesso ao utilizador {user_id}"}
 
 # Remove a associação de um hábito digital a um utilizador
 @router.delete("/{user_id}/{habit_id}")
