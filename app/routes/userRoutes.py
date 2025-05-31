@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from jose import jwt, JWTError
 from fastapi import status
 from auth import SECRET_KEY, ALGORITHM
+from cronjob import assign_missing_tasks
 
 router = APIRouter()
 
@@ -58,6 +59,8 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    assign_missing_tasks()
 
     return {"message": "User registered successfully", "user_id": user.id}
 

@@ -9,14 +9,13 @@ from routes.digitalHabitRoutes import router as digital_habit_router
 from routes.achievementRoutes import router as achievement_router
 from routes.questionRoutes import router as question_router
 from routes.screentimeRoutes import router as screen_time_router
-from sqlalchemy.orm import Session
 
 from sockets_events import sio
 import socketio
 from sockets_events import register_socket_events 
 
 
-from cronjob import start_scheduler, assign_daily_tasks, should_assign_tasks_today
+from cronjob import start_scheduler, assign_missing_tasks
 scheduler = None
 
 @asynccontextmanager
@@ -24,10 +23,7 @@ async def lifespan(app: FastAPI):
     global scheduler
     Base.metadata.create_all(bind=engine)
 
-    with Session(engine) as session:
-        if should_assign_tasks_today(session):
-            print("⏳ Atribuindo tarefas imediatamente ao iniciar...")
-            assign_daily_tasks()
+    assign_missing_tasks()
 
     scheduler = start_scheduler()
     print("✅ Scheduler started.")
