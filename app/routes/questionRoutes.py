@@ -36,6 +36,11 @@ def add_question_answer(
     body: List[QuestionAnswer] = Body(...),
     db: Session = Depends(get_db)
 ):
+    print("Received answers:", body)
+    if not body:
+        raise HTTPException(status_code=400, detail="No answers provided")
+    question_ids = {ans.question_id for ans in body}
+    print("Question IDs:", question_ids)
     for ans in body:
         if not (0 <= ans.answer <= 5):
             raise HTTPException(status_code=400, detail="Answer must be between 0 and 5")
