@@ -100,23 +100,30 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
     db.commit()
     return {"message": f"Task toggled to {status.done}"}
 
-# Mostra as tarefas concluidas por um utilizador
+# Mostra as tarefas concluidas por um utilizador (excluindo as do dia atual)
 @router.get("/{user_id}/completed")
 def list_completed_tasks(user_id: int, db: Session = Depends(get_db)):
+    today = date.today()
+    start_of_day = datetime.combine(today, time.min)
+    
     completed_tasks = (
-        db.query(Task)
+        db.query(Task, UserTaskStatus)
         .join(UserTaskStatus, UserTaskStatus.id_task == Task.id)
-        .filter(UserTaskStatus.id_user == user_id, UserTaskStatus.done == True)
+        .filter(
+            UserTaskStatus.id_user == user_id,
+            UserTaskStatus.done == True,
+            UserTaskStatus.completed_at < start_of_day  # Só mostra concluídas antes de hoje
+        )
         .all()
     )
+    
     return [
-        {"id": task.id, "description": task.description, "completed_at": status.completed_at}
-        for task, status in (
-            db.query(Task, UserTaskStatus)
-            .join(UserTaskStatus, UserTaskStatus.id_task == Task.id)
-            .filter(UserTaskStatus.id_user == user_id, UserTaskStatus.done == True)
-            .all()
-        )
+        {
+            "id": task.id, 
+            "description": task.description, 
+            "completed_at": status.completed_at
+        }
+        for task, status in completed_tasks
     ]
 
 # Mostra as tarefas diárias (de hoje) atribuídas a um utilizador
