@@ -15,10 +15,25 @@ from sockets_events import sio
 import socketio
 from sockets_events import register_socket_events 
 
+
+from cronjob import start_scheduler, assign_daily_tasks, should_assign_tasks_today
+scheduler = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global scheduler
     Base.metadata.create_all(bind=engine)
+
+    with Session(engine) as session:
+        if should_assign_tasks_today(session):
+            print("⏳ Atribuindo tarefas imediatamente ao iniciar...")
+            assign_daily_tasks()
+
+    scheduler = start_scheduler()
+    print("✅ Scheduler started.")
     yield
+    scheduler.shutdown()
+    print("🛑 Scheduler stopped.")
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
