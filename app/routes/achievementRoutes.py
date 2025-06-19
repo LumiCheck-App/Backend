@@ -10,6 +10,8 @@ from models.achievementStatusModel import UserAchievementStatus
 from config import get_db
 from pydantic import BaseModel
 from typing import Optional
+from socketio import AsyncServer
+from sockets_events import sio
 
 router = APIRouter()
 
@@ -66,18 +68,35 @@ def delete_achievement(achievement_id: int, db: Session = Depends(get_db)):
 
 # Associa um trofeu a um utilizador
 @router.post("/{user_id}/{achievement_id}/unlock")
-def unlock_achievement(user_id: int, achievement_id: int, db: Session = Depends(get_db)):
-    # Verifica se o trofeu existe
+async def unlock_achievement(user_id: int, achievement_id: int, db: Session = Depends(get_db)):
+    #Verifica se o troféu existe
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
-        raise HTTPException(status_code=404, detail="Achievement not found")
+        raise HTTPException(status_code=404, detail="Troféu não encontrado")
+    
+    # Verifica se já tem o troféu
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.id == achievement_id
+    ).first()
 
-    status = db.query(UserAchievementStatus).filter_by(id_user=user_id, id_achievement=achievement_id).first()
-    if not status:
-        status = UserAchievementStatus(id_user=user_id, id_achievement=achievement_id, done=True)
-        db.add(status)
-    else:
-        status.done = True
+    # 3. Atualiza ou cria o registro do troféu
+    if not existing_achievement:
+        user_achievement = UserAchievementStatus(
+            id_user=user_id,
+            id_achievement=achievement_id,
+            done=True,
+            # achieved_at=datetime.now() 
+        )
+        db.add(user_achievement)
+        await sio.emit(
+            'trophy_unlocked',
+            {
+                "title": achievement.name,
+                "description": achievement.description
+            },
+            room=f"user_{user_id}"
+        )
 
     db.commit()
     return {"message": "Achievement marked as unlocked"}
