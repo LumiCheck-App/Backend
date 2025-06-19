@@ -2,9 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends, Body
 from sqlalchemy.orm import Session
 from models.questionModel import Question
 from models.questionStatusModel import UserQuestionAnswer
+from models.achievementModel import Achievement
+from models.achievementStatusModel import UserAchievementStatus
 from config import get_db
 from pydantic import BaseModel
 from typing import List
+from socketio import AsyncServer
+from sockets_events import sio
 
 router = APIRouter()
 
@@ -58,7 +62,7 @@ def add_question_answer(
 
 # Atualiza a resposta de um utilizador a uma pergunta
 @router.put("/answer")
-def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db)):
+async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db)):
     answer = db.query(UserQuestionAnswer).filter_by(id_user=body.user_id, id_question=body.question_id).first()
     if not answer:
         raise HTTPException(status_code=404, detail="answer not found")
@@ -67,6 +71,34 @@ def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Answer must be between 0 and 5")
     
     answer.answer = body.answer
+    user_id = body.user_id
+
+    # Verifica se já tem o troféu
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'primeiropasso'
+    ).first()
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement:
+        achievement = db.query(Achievement).filter_by(tag='primeiropasso').first()
+        if achievement:
+            user_achievement = UserAchievementStatus(
+                id_user=user_id,
+                id_achievement=achievement.id,
+                done=True,
+                #achieved_at=datetime.now()
+            )
+            db.add(user_achievement)
+            await sio.emit(
+                'trophy_unlocked',
+                {
+                    "title": achievement.name,
+                    "description": achievement.description
+                },
+                room=f"user_{user_id}"
+            )
+
     db.commit()
     return {"message": "Question status successfully updated"}
 

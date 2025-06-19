@@ -7,10 +7,11 @@ from models.achievementModel import Achievement
 from models.achievementStatusModel import UserAchievementStatus
 from config import get_db
 from pydantic import BaseModel
-from datetime import date, datetime, time
-from sqlalchemy import and_
+from datetime import date, datetime, time, timedelta
+from sqlalchemy import and_, func
 from socketio import AsyncServer
 from sockets_events import sio
+
 
 
 router = APIRouter()
@@ -43,6 +44,38 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
 def list_tasks(db: Session = Depends(get_db)):
     return db.query(Task).all()
 
+def get_streak_count(db: Session, user_id: int) -> int:
+    # ÚNICA CONSULTA que busca todas as datas com tarefas concluídas
+    dates = db.query(
+        func.date(UserTaskStatus.completed_at).label('task_date')
+    ).filter(
+        UserTaskStatus.id_user == user_id,
+        UserTaskStatus.done == True
+    ).distinct().order_by(
+        func.date(UserTaskStatus.completed_at).desc()
+    ).all()
+    
+    if not dates:
+        return 0
+    
+    # Processamento em memória
+    dates = [d[0] for d in dates]  # Converte para objetos date
+    today = datetime.now().date()
+    
+    # Se não há tarefa concluída hoje, streak = 0
+    if dates[0] != today:
+        return 0
+    
+    streak = 1
+    # Verifica dias consecutivos
+    for i in range(1, len(dates)):
+        if dates[i] == (dates[i-1] - timedelta(days=1)):
+            streak += 1
+        else:
+            break
+    
+    return streak
+
 @router.post("/{task_id}/{user_id}/toggle")
 async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db)):
     task = db.query(Task).filter_by(id=task_id).first()
@@ -66,36 +99,95 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
     status.done = not status.done
     status.completed_at = datetime.now()
 
-    # Recontar tarefas completas
-    completed_tasks_count = db.query(UserTaskStatus).filter(
-        UserTaskStatus.id_user == user_id,
-        UserTaskStatus.done == True
-    ).count()
-
     # Verifica se já tem o troféu "marcodos20"
     existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
         UserAchievementStatus.id_user == user_id,
         Achievement.tag == 'marcodos20'
     ).first()
 
-    if completed_tasks_count >= 20 and not existing_achievement:
-        achievement = db.query(Achievement).filter_by(tag='marcodos20').first()
-        if achievement:
-            user_achievement = UserAchievementStatus(
-                id_user=user_id,
-                id_achievement=achievement.id,
-                done=True,
-                #achieved_at=datetime.now()
-            )
-            db.add(user_achievement)
-            await sio.emit(
-                'trophy_unlocked',
-                {
-                    "title": achievement.name,
-                    "description": achievement.description
-                },
-                room=f"user_{user_id}"
-            )
+    # Se o utilizador completar 20 tarefas e não tiver o troféu, atribui-o
+    if not existing_achievement:
+        # Recontar tarefas completas
+        completed_tasks_count = db.query(UserTaskStatus).filter(
+            UserTaskStatus.id_user == user_id,
+            UserTaskStatus.done == True
+        ).count()
+        if completed_tasks_count >= 20:
+            achievement = db.query(Achievement).filter_by(tag='marcodos20').first()
+            if achievement:
+                user_achievement = UserAchievementStatus(
+                    id_user=user_id,
+                    id_achievement=achievement.id,
+                    done=True,
+                    #achieved_at=datetime.now()
+                )
+                db.add(user_achievement)
+                await sio.emit(
+                    'trophy_unlocked',
+                    {
+                        "title": achievement.name,
+                        "description": achievement.description
+                    },
+                    room=f"user_{user_id}"
+                )
+
+    # Verifica se já tem o troféu
+    existing_achievement2 = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'dedicado'
+    ).first()
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement2 :
+        # Ver streak de tarefas concluídas
+        streak_tasks_count = get_streak_count(db, user_id)
+        if streak_tasks_count >= 7:
+            achievement = db.query(Achievement).filter_by(tag='dedicado').first()
+            if achievement:
+                user_achievement = UserAchievementStatus(
+                    id_user=user_id,
+                    id_achievement=achievement.id,
+                    done=True,
+                    #achieved_at=datetime.now()
+                )
+                db.add(user_achievement)
+                await sio.emit(
+                    'trophy_unlocked',
+                    {
+                        "title": achievement.name,
+                        "description": achievement.description
+                    },
+                    room=f"user_{user_id}"
+                )
+
+    # Verifica se já tem o troféu
+    existing_achievement3 = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'perfecionista'
+    ).first()
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement3 :
+        # Ver streak de tarefas concluídas
+        streak_tasks_count = get_streak_count(db, user_id)
+        if streak_tasks_count >= 30:
+            achievement = db.query(Achievement).filter_by(tag='perfecionista').first()
+            if achievement:
+                user_achievement = UserAchievementStatus(
+                    id_user=user_id,
+                    id_achievement=achievement.id,
+                    done=True,
+                    #achieved_at=datetime.now()
+                )
+                db.add(user_achievement)
+                await sio.emit(
+                    'trophy_unlocked',
+                    {
+                        "title": achievement.name,
+                        "description": achievement.description
+                    },
+                    room=f"user_{user_id}"
+                )
 
     db.commit()
     return {"message": f"Task toggled to {status.done}"}

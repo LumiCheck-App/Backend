@@ -7,14 +7,14 @@ import random
 from sqlalchemy import func
 
 def assign_missing_tasks():
-    print(f"🕒 Verificando tarefas em falta: {datetime.now()}")
+    print(f"🕒 Verificar tarefas: {datetime.now()}")
 
     with Session(engine) as session:
         today = datetime.now().date()
         all_tasks = session.query(taskModel.Task).all()
 
         if len(all_tasks) < 2:
-            print("⚠️ Não há tarefas suficientes para atribuir.")
+            print("Não há tarefas suficientes para atribuir.")
             return
 
         users = session.query(userModel.User).all()
@@ -33,7 +33,7 @@ def assign_missing_tasks():
 
             available_tasks = [t for t in all_tasks if t.id not in existing_task_ids]
             if len(available_tasks) < missing_count:
-                print(f"⚠️ User {user.id} tem menos tarefas únicas disponíveis do que precisa.")
+                print(f"User {user.id} não tem tarefas disponiveis para atribuir.")
                 continue
 
             new_tasks = random.sample(available_tasks, missing_count)
