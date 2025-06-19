@@ -170,8 +170,37 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
     if not existing_achievement3 :
         # Ver streak de tarefas concluídas
         streak_tasks_count = get_streak_count(db, user_id)
-        if streak_tasks_count >= 30:
+        if streak_tasks_count >= 14:
             achievement = db.query(Achievement).filter_by(tag='perfecionista').first()
+            if achievement:
+                user_achievement = UserAchievementStatus(
+                    id_user=user_id,
+                    id_achievement=achievement.id,
+                    done=True,
+                    #achieved_at=datetime.now()
+                )
+                db.add(user_achievement)
+                await sio.emit(
+                    'trophy_unlocked',
+                    {
+                        "title": achievement.name,
+                        "description": achievement.description
+                    },
+                    room=f"user_{user_id}"
+                )
+
+                # Verifica se já tem o troféu
+    existing_achievement4 = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'modozen'
+    ).first()
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement4 :
+        # Ver streak de tarefas concluídas
+        streak_tasks_count = get_streak_count(db, user_id)
+        if streak_tasks_count >= 30:
+            achievement = db.query(Achievement).filter_by(tag='modozen').first()
             if achievement:
                 user_achievement = UserAchievementStatus(
                     id_user=user_id,
