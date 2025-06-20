@@ -17,6 +17,7 @@ class UserUpdate(BaseModel):
     email: str = None
     password: str = None
     onboarding: bool = None
+    firebase_token: str = None
 
 class RequestUser(BaseModel):
     username: str
@@ -54,8 +55,9 @@ def register(
         username=user_data.username,
         email=user_data.email,
         password=hashed_password,
-        onboarding=user_data.onboarding
-    )
+        onboarding=user_data.onboarding,
+        )
+    
     db.add(user)
     db.commit()
     db.refresh(user)
