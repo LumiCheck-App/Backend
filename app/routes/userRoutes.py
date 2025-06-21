@@ -131,6 +131,8 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
         user.password = hash_password(user_update.password)
     if user_update.onboarding is not None:
         user.onboarding = user_update.onboarding
+    if user_update.firebase_token:
+        user.firebase_token = user_update.firebase_token
 
     db.commit()
     db.refresh(user)
