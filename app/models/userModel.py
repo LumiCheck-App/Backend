@@ -10,6 +10,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     onboarding = Column(Boolean, default=False)
+    firebase_token = Column(String, nullable=True)
 
     screentimes = relationship("ScreenTime", back_populates="user")  # Aqui, usar "ScreenTime" como string
     digital_habits = relationship("UserDigitalHabitStatus", back_populates="user")
