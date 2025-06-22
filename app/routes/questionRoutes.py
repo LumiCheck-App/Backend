@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List
 from socketio import AsyncServer
 from sockets_events import sio
+import random
 
 router = APIRouter()
 
@@ -115,6 +116,36 @@ def list_user_answers(user_id: int, db: Session = Depends(get_db)):
         {"question_id": question.id, "question": question.question, "answer": answer.answer}
         for answer, question in answers
     ]
+
+# Dá uma pergunta que o utilizador ainda não respondeu
+@router.get("/{user_id}/random_unanswered")
+def random_unanswered_question(user_id: int, db: Session = Depends(get_db)):
+    answered_question_ids = (
+        db.query(UserQuestionAnswer.id_question)
+        .filter(UserQuestionAnswer.id_user == user_id)
+        .all()
+    )
+
+    answered_ids = [answer.id_question for answer in answered_question_ids]
+    
+    # Filtra as perguntas que o utilizador ainda não respondeu
+    unanswered_questions = (
+        db.query(Question)
+        .filter(Question.id.notin_(answered_ids))
+        .all()
+    )
+    if not unanswered_questions:
+        raise HTTPException(status_code=404, detail="No unanswered questions found for this user")
+    
+    # Seleciona uma pergunta aleatória
+    question = random.choice(unanswered_questions)
+
+    # Retorna a pergunta não respondida (não as respondidas!)
+    return {
+        "question_id": question.id, 
+        "question": question.question,
+        "total_unanswered": len(unanswered_questions)
+    }
 
 # Apaga uma pergunta
 @router.delete("/{question_id}")
