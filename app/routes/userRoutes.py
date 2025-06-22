@@ -18,6 +18,7 @@ class UserUpdate(BaseModel):
     password: str = None
     onboarding: bool = None
     firebase_token: str = None
+    is_monitoring: bool = None
 
 class RequestUser(BaseModel):
     username: str
@@ -133,6 +134,8 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
         user.onboarding = user_update.onboarding
     if user_update.firebase_token:
         user.firebase_token = user_update.firebase_token
+    if user_update.is_monitoring is not None:
+        user.is_monitoring = user_update.is_monitoring
 
     db.commit()
     db.refresh(user)
