@@ -1,6 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from models.userModel import User
+from models.achievementStatusModel import UserAchievementStatus
+from models.questionStatusModel import UserQuestionAnswer
+from models.screentimeModel import ScreenTime
+from models.taskStatusModel import UserTaskStatus
+from models.digitalHabitModel import UserDigitalHabitStatus
 from utils import hash_password, verify_password
 from auth import create_access_token, get_current_user, create_refresh_token
 from config import get_db
@@ -136,9 +141,40 @@ def delete_user(
             detail="Incorrect password"
         )
     
-    db.delete(user)
-    db.commit()
-    return {"message": f"User with ID {user_id} has been deleted", "success": True}
+    try:
+        # Iniciar transação
+        db.begin()
+        
+        # 1. Deletar UserAchievementStatus
+        db.query(UserAchievementStatus).filter(UserAchievementStatus.id_user == user_id).delete()
+        
+        # 2. Deletar UserQuestionAnswer
+        db.query(UserQuestionAnswer).filter(UserQuestionAnswer.id_user == user_id).delete()
+        
+        # 3. Deletar ScreenTime
+        db.query(ScreenTime).filter(ScreenTime.id_user == user_id).delete()
+        
+        # 4. Deletar UserTaskStatus
+        db.query(UserTaskStatus).filter(UserTaskStatus.id_user == user_id).delete()
+        
+        # 5. Deletar UserDigitalHabitStatus
+        db.query(UserDigitalHabitStatus).filter(UserDigitalHabitStatus.id_user == user_id).delete()
+        
+        # Finalmente deletar o usuário
+        db.delete(user)
+        
+        # Confirmar todas as operações
+        db.commit()
+        
+        return {"message": f"User with ID {user_id} has been deleted", "success": True}
+    
+    except Exception as e:
+        # Em caso de erro, fazer rollback
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting user: {str(e)}"
+        )
 
 @router.get("/protected")
 def protected_route(current_user: str = Depends(get_current_user)):
