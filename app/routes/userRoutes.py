@@ -109,14 +109,36 @@ async def refresh_token(request: Request):
 def list_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
-@router.delete("/{user_id}") 
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+class DeleteUserRequest(BaseModel):
+    password: str
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    delete_request: DeleteUserRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    if int(current_user) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own account"
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verificar senha
+    if not verify_password(delete_request.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+    
     db.delete(user)
     db.commit()
-    return {"message": f"User with ID {user_id} has been deleted"}
+    return {"message": f"User with ID {user_id} has been deleted", "success": True}
 
 @router.get("/protected")
 def protected_route(current_user: str = Depends(get_current_user)):
