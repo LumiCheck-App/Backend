@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from models.userModel import User
 from models.achievementStatusModel import UserAchievementStatus
 from models.questionStatusModel import UserQuestionAnswer
