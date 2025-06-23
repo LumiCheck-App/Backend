@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, JSONResponse
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from models.screentimeModel import ScreenTime
