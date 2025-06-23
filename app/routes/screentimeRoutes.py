@@ -81,9 +81,14 @@ def get_last_7days_screentime(user_id: int, db: Session = Depends(get_db)):
         # Converter o timestamp para o formato dd/mm
         date_str = entry.timestamp.strftime("%d/%m")
         
-        result.append({
-            "date": date_str,
-            "usage_data": entry.usage_data
-        })
+        # Extrair o total_minutes do usage_data
+        total_minutes = entry.usage_data.get('total_minutes')
+        
+        # Se não existir total_minutes, pode definir um valor padrão ou pular
+        if total_minutes is not None:
+            result.append({
+                "date": date_str,
+                "total_minutes": total_minutes
+            })
 
     return result
