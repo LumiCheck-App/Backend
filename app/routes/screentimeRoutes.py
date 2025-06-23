@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from models.screentimeModel import ScreenTime
+from datetime import datetime, timedelta
+from collections import defaultdict
 from models.userModel import User
 from config import get_db
 from pydantic import BaseModel
@@ -54,3 +56,41 @@ def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Screen time entry with ID {entry_id} has been deleted"}
 
+@router.get("/last-7-entries/{user_id}")
+def get_last_7_days_by_entries(user_id: int, db: Session = Depends(get_db)):
+    # Subquery para pegar os últimos 7 dias distintos registrados no banco para o user
+    subquery = (
+        db.query(
+            func.date(ScreenTime.timestamp).label("day")
+        )
+        .filter(ScreenTime.id_user == user_id)
+        .distinct()
+        .order_by(func.date(ScreenTime.timestamp).desc())
+        .limit(7)
+        .subquery()
+    )
+
+    # Consulta principal: pega os registros que estão nesses dias
+    entries = (
+        db.query(ScreenTime)
+        .filter(
+            ScreenTime.id_user == user_id,
+            func.date(ScreenTime.timestamp).in_(db.query(subquery.c.day))
+        )
+        .order_by(ScreenTime.timestamp)
+        .all()
+    )
+
+    if not entries:
+        raise HTTPException(status_code=404, detail="No screen time data found for this user")
+
+    # Agrupa os dados por dia no formato dd/mm
+    grouped_data = defaultdict(list)
+    for entry in entries:
+        date_key = entry.timestamp.strftime("%d/%m")
+        grouped_data[date_key].append(entry.usage_data)
+
+    # Ordena por data decrescente (últimos dias registrados primeiro)
+    sorted_data = dict(sorted(grouped_data.items(), key=lambda x: datetime.strptime(x[0], "%d/%m"), reverse=True))
+
+    return JSONResponse(content=sorted_data)
