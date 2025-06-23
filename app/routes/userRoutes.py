@@ -12,6 +12,11 @@ from cronjob import assign_missing_tasks
 
 router = APIRouter()
 
+class UserCredentialsUpdate(BaseModel):
+    current_password: str
+    new_username: str = None
+    new_email: str = None
+
 class UserUpdate(BaseModel):
     username: str = None
     email: str = None
@@ -141,3 +146,57 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     db.refresh(user)
 
     return {"message": f"User with ID {user_id} has been updated", "user": user}
+
+
+@router.put("/{user_id}/updatecredentials")
+def update_user_credentials(
+    user_id: int,
+    credentials_update: UserCredentialsUpdate,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verificar senha
+    if not verify_password(credentials_update.current_password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+    
+    updated_fields = {}
+    
+    # Atualizar username se fornecido
+    if credentials_update.new_username:
+        # Verificar se username já existe
+        existing_user = db.query(User).filter(User.username == credentials_update.new_username).first()
+        if existing_user and existing_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        user.username = credentials_update.new_username
+        updated_fields["username"] = credentials_update.new_username
+    
+    # Atualizar email se fornecido
+    if credentials_update.new_email:
+        # Verificar se email já existe
+        existing_email = db.query(User).filter(User.email == credentials_update.new_email).first()
+        if existing_email and existing_email.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+        user.email = credentials_update.new_email
+        updated_fields["email"] = credentials_update.new_email
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "success": True,
+        "message": "Credentials updated successfully",
+        "updated_fields": updated_fields,
+        "user": user
+    }
