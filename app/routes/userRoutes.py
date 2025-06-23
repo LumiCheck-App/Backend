@@ -5,7 +5,7 @@ from models.achievementStatusModel import UserAchievementStatus
 from models.questionStatusModel import UserQuestionAnswer
 from models.screentimeModel import ScreenTime
 from models.taskStatusModel import UserTaskStatus
-from models.digitalHabitModel import UserDigitalHabitStatus
+from models.userDigitalHabitModel import UserDigitalHabitStatus
 from utils import hash_password, verify_password
 from auth import create_access_token, get_current_user, create_refresh_token
 from config import get_db
