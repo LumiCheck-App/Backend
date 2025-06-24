@@ -12,6 +12,9 @@ from pydantic import BaseModel
 from typing import Optional
 from socketio import AsyncServer
 from sockets_events import sio
+from datetime import datetime, timedelta
+from sqlalchemy import and_, func
+from models.taskStatusModel import UserTaskStatus
 
 router = APIRouter()
 
@@ -129,6 +132,77 @@ def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
     )
     return [{"id": achievement.id, "name": achievement.name, "description": achievement.description, "tag": achievement.tag, "image": achievement.image} for achievement in achievements]
 
+
+def get_streak_count(db: Session, user_id: int) -> int:
+    # ÚNICA CONSULTA que busca todas as datas com tarefas concluídas
+    dates = db.query(
+        func.date(UserTaskStatus.completed_at).label('task_date')
+    ).filter(
+        UserTaskStatus.id_user == user_id,
+        UserTaskStatus.done == True
+    ).distinct().order_by(
+        func.date(UserTaskStatus.completed_at).desc()
+    ).all()
+    
+    if not dates:
+        return 0
+    
+    # Processamento em memória
+    dates = [d[0] for d in dates]  # Converte para objetos date
+    today = datetime.now().date()
+    
+    # Se não há tarefa concluída hoje, streak = 0
+    if dates[0] != today:
+        return 0
+    
+    streak = 1
+    # Verifica dias consecutivos
+    for i in range(1, len(dates)):
+        if dates[i] == (dates[i-1] - timedelta(days=1)):
+            streak += 1
+        else:
+            break
+    
+    return streak
+
+
+# Função auxiliar para obter o número de tarefas concluídas consecutivas
+@router.get("/{user_id}/checkModoZen")
+def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db)):
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'modozen'
+    ).first()
+
+    achievement = db.query(Achievement).filter_by(tag='modozen').first()
+
+    if existing_achievement and existing_achievement.done:
+        return {
+            "unlocked": True,
+            "progress": 30,
+            "total": 30,
+            "achievement": {
+                "id": achievement.id,
+                "name": achievement.name,
+                "description": achievement.description,
+                "tag": achievement.tag,
+                "image": achievement.image
+            }
+        }
+    else:
+        streak_count = get_streak_count(db, user_id)
+        return {
+            "unlocked": False,
+            "progress": streak_count,
+            "total": 30,
+            "achievement": {
+                "id": achievement.id,
+                "name": achievement.name,
+                "description": achievement.description,
+                "tag": achievement.tag,
+                "image": achievement.image
+            }
+        }
 
 # Lista todos os trofeus (conquistados ou não) de um utilizador
 @router.get("/{user_id}/status")
