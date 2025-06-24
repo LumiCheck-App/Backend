@@ -95,7 +95,8 @@ async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get
                 'trophy_unlocked',
                 {
                     "title": achievement.name,
-                    "description": achievement.description
+                    "description": achievement.description,
+                    "image": achievement.image
                 },
                 room=f"user_{user_id}"
             )

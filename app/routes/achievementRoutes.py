@@ -96,7 +96,8 @@ async def unlock_achievement(user_id: int, achievement_id: int, db: Session = De
             'trophy_unlocked',
             {
                 "title": achievement.name,
-                "description": achievement.description
+                "description": achievement.description,
+                "image": achievement.image
             },
             room=f"user_{user_id}"
         )

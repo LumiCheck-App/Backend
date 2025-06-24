@@ -126,7 +126,8 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
                     'trophy_unlocked',
                     {
                         "title": achievement.name,
-                        "description": achievement.description
+                        "description": achievement.description,
+                        "image": achievement.image
                     },
                     room=f"user_{user_id}"
                 )
@@ -155,7 +156,8 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
                     'trophy_unlocked',
                     {
                         "title": achievement.name,
-                        "description": achievement.description
+                        "description": achievement.description,
+                        "image": achievement.image
                     },
                     room=f"user_{user_id}"
                 )
@@ -184,7 +186,8 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
                     'trophy_unlocked',
                     {
                         "title": achievement.name,
-                        "description": achievement.description
+                        "description": achievement.description,
+                        "image": achievement.image
                     },
                     room=f"user_{user_id}"
                 )
@@ -213,7 +216,8 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
                     'trophy_unlocked',
                     {
                         "title": achievement.name,
-                        "description": achievement.description
+                        "description": achievement.description,
+                        "image": achievement.image
                     },
                     room=f"user_{user_id}"
                 )
