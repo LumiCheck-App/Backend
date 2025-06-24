@@ -128,7 +128,6 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Verificação de autorização
     if int(current_user.id) != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -136,57 +135,33 @@ def delete_user(
         )
 
     try:
-        # Iniciar transação
-        db.begin()
-        
-        # Obter usuário dentro da transação
-        user = db.query(User).filter(User.id == user_id).with_for_update().first()
+        # Verificar usuário e senha primeiro
+        user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Verificar senha
         if not verify_password(delete_request.password, user.password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect password"
             )
-        
+
         logger.info(f"Starting deletion process for user {user_id}")
         
-        # 1. Deletar UserAchievementStatus
-        logger.info("Deleting UserAchievementStatus records")
         db.query(UserAchievementStatus).filter(UserAchievementStatus.id_user == user_id).delete()
-        
-        # 2. Deletar UserQuestionAnswer
-        logger.info("Deleting UserQuestionAnswer records")
         db.query(UserQuestionAnswer).filter(UserQuestionAnswer.id_user == user_id).delete()
-        
-        # 3. Deletar ScreenTime
-        logger.info("Deleting ScreenTime records")
         db.query(ScreenTime).filter(ScreenTime.id_user == user_id).delete()
-        
-        # 4. Deletar UserTaskStatus
-        logger.info("Deleting UserTaskStatus records")
         db.query(UserTaskStatus).filter(UserTaskStatus.id_user == user_id).delete()
-        
-        # 5. Deletar UserDigitalHabitStatus
-        logger.info("Deleting UserDigitalHabitStatus records")
         db.query(UserDigitalHabitStatus).filter(UserDigitalHabitStatus.id_user == user_id).delete()
         
-        # Finalmente deletar o usuário
-        logger.info("Deleting User record")
         db.delete(user)
+        db.commit() 
         
-        # Confirmar todas as operações
-        db.commit()
         logger.info(f"User {user_id} deleted successfully")
-        
         return {"message": f"User with ID {user_id} has been deleted", "success": True}
 
-    except HTTPException as he:
-        db.rollback()
-        logger.error(f"HTTPException during user deletion: {he.detail}")
-        raise he
+    except HTTPException:
+        raise
         
     except SQLAlchemyError as sae:
         db.rollback()
@@ -202,14 +177,6 @@ def delete_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"
-        )
-    
-    except Exception as e:
-        # Em caso de erro, fazer rollback
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting user: {str(e)}"
         )
 
 @router.get("/protected")
