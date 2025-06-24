@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from models.userModel import User
@@ -16,6 +16,7 @@ from fastapi import status
 from auth import SECRET_KEY, ALGORITHM
 from cronjob import assign_missing_tasks
 import logging
+from fastapi.security import OAuth2PasswordRequestForm
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -95,6 +96,23 @@ def login(requestUser: RequestUser, db: Session = Depends(get_db)):
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user
+    }
+
+# Novo endpoint para o Swagger UI (mesma rota, mas aceita form-data)
+@router.post("/user/login", include_in_schema=False)
+def login_swagger_ui(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    # Reaproveita a mesma lógica, mas adaptada para form-data
+    user = db.query(User).filter(User.username == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password):
+        raise HTTPException(status_code=400, detail="Credenciais inválidas")
+    
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
     }
 
 @router.post("/refresh")
