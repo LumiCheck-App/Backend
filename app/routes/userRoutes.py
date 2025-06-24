@@ -85,7 +85,7 @@ def register(
 def login(requestUser: RequestUser, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == requestUser.username).first()
     if not user or not verify_password(requestUser.password, user.password):
-        raise HTTPException(status_code=400, detail="Username ou password incorretos")
+        raise HTTPException(status_code=401, detail="Username ou password incorretos")
 
     user_id = str(user.id)
     access_token = create_access_token(data={"sub": user_id})
