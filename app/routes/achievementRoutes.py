@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from models.userModel import User
 from models.taskModel import Task
 from models.digitalHabitModel import DigitalHabit
 from models.taskStatusModel import UserTaskStatus
@@ -18,6 +17,9 @@ from models.taskStatusModel import UserTaskStatus
 
 router = APIRouter()
 
+from auth import get_current_user
+from models.userModel import User
+
 class AchievementCreate(BaseModel):
     name: str
     description: str
@@ -26,12 +28,12 @@ class AchievementCreate(BaseModel):
 
 # Lista os trofeus
 @router.get("/")
-def list_achievements(db: Session = Depends(get_db)):
+def list_achievements(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Achievement).all()
 
 # Cria um novo trofeu
 @router.post("/create")
-def create_achievement(achievement_data: AchievementCreate, db: Session = Depends(get_db)):
+def create_achievement(achievement_data: AchievementCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_achievement = Achievement(name=achievement_data.name, description=achievement_data.description, tag=achievement_data.tag, image=achievement_data.image)
     db.add(new_achievement)
     db.commit()
@@ -40,7 +42,7 @@ def create_achievement(achievement_data: AchievementCreate, db: Session = Depend
 
 # Atualiza um trofeu
 @router.put("/{achievement_id}")
-def update_achievement(achievement_id: int, name: str = None, description: str = None, tag: str = None, image: str = None, db: Session = Depends(get_db)):
+def update_achievement(achievement_id: int, name: str = None, description: str = None, tag: str = None, image: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
@@ -60,7 +62,7 @@ def update_achievement(achievement_id: int, name: str = None, description: str =
 
 # Apaga um trofeu
 @router.delete("/{achievement_id}")
-def delete_achievement(achievement_id: int, db: Session = Depends(get_db)):
+def delete_achievement(achievement_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
@@ -71,7 +73,7 @@ def delete_achievement(achievement_id: int, db: Session = Depends(get_db)):
 
 # Associa um trofeu a um utilizador
 @router.post("/{user_id}/{achievement_id}/unlock")
-async def unlock_achievement(user_id: int, achievement_id: int, db: Session = Depends(get_db)):
+async def unlock_achievement(user_id: int, achievement_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     #Verifica se o troféu existe
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
@@ -107,7 +109,7 @@ async def unlock_achievement(user_id: int, achievement_id: int, db: Session = De
 
 #Lista os trofeus desbloqueados por um utilizador
 @router.get("/{user_id}/unlocked")
-def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
+def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     achievements = (
         db.query(Achievement)
         .join(UserAchievementStatus, UserAchievementStatus.id_achievement == Achievement.id)
@@ -118,7 +120,7 @@ def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
 
 #Lista os trofeus bloqueados de um utilizador
 @router.get("/{user_id}/locked")
-def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
+def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     unlocked_achievements = (
         db.query(Achievement)
         .join(UserAchievementStatus, UserAchievementStatus.id_achievement == Achievement.id)
@@ -169,7 +171,7 @@ def get_streak_count(db: Session, user_id: int) -> int:
 
 # Função auxiliar para obter o número de tarefas concluídas consecutivas
 @router.get("/{user_id}/checkModoZen")
-def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db)):
+def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
         UserAchievementStatus.id_user == user_id,
         Achievement.tag == 'modozen'
@@ -207,7 +209,7 @@ def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db)):
 
 # Lista todos os trofeus (conquistados ou não) de um utilizador
 @router.get("/{user_id}/status")
-def list_achievements_with_status(user_id: int, db: Session = Depends(get_db)):
+def list_achievements_with_status(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     achievements = (
         db.query(
             Achievement.id,

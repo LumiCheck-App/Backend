@@ -4,19 +4,21 @@ from sqlalchemy.sql import func
 from models.screentimeModel import ScreenTime
 from datetime import datetime, timedelta
 from collections import defaultdict
-from models.userModel import User
 from config import get_db
 from pydantic import BaseModel
 from typing import Dict
 
 router = APIRouter()
 
+from auth import get_current_user
+from models.userModel import User
+
 class ScreenTimeCreate(BaseModel):
     id_user: int
     usage_data: Dict  # JSON format
 
 @router.post("/")
-def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db)):
+def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Check if the user exists
     user = db.query(User).filter(User.id == entry.id_user).first()
     if not user:
@@ -35,7 +37,7 @@ def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db)):
     return {"message": "Screen time entry created successfully", "entry": new_entry}
 
 @router.get("/")
-def list_screentime_entries(db: Session = Depends(get_db)):
+def list_screentime_entries(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(ScreenTime).all()
 
 @router.get("/{user_id}")
@@ -47,7 +49,7 @@ def get_user_screentime(user_id: int, db: Session = Depends(get_db)):
     return screentime_entries
 
 @router.delete("/{entry_id}")
-def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db)):
+def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     entry = db.query(ScreenTime).filter(ScreenTime.id == entry_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Screen time entry not found")
@@ -57,7 +59,7 @@ def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db)):
     return {"message": f"Screen time entry with ID {entry_id} has been deleted"}
 
 @router.get("/last7days/{user_id}")
-def get_last_7days_screentime(user_id: int, db: Session = Depends(get_db)):
+def get_last_7days_screentime(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Verificar se o usuário existe
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

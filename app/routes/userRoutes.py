@@ -115,7 +115,7 @@ async def refresh_token(request: Request):
 
 
 @router.get("/")
-def list_users(db: Session = Depends(get_db)):
+def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(User).all()
 
 class DeleteUserRequest(BaseModel):
@@ -126,7 +126,7 @@ def delete_user(
     user_id: int,
     delete_request: DeleteUserRequest,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     # Verificação de autorização
     if int(current_user) != user_id:
@@ -213,11 +213,11 @@ def delete_user(
         )
 
 @router.get("/protected")
-def protected_route(current_user: str = Depends(get_current_user)):
+def protected_route(current_user: User = Depends(get_current_user)):
     return {"message": f"Hello, {current_user}!"}
 
 @router.put("/{user_id}")
-def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -246,7 +246,8 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 def update_user_credentials(
     user_id: int,
     credentials_update: UserCredentialsUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

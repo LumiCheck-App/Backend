@@ -11,10 +11,10 @@ from socketio import AsyncServer
 from sockets_events import sio
 import random
 
+router = APIRouter()
+
 from auth import get_current_user
 from models.userModel import User
-
-router = APIRouter()
 
 class QuestionCreate(BaseModel):
     question: str

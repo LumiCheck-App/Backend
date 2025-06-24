@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from models.userModel import User
 from models.taskModel import Task
 from models.taskStatusModel import UserTaskStatus
 from models.achievementModel import Achievement
@@ -12,16 +11,17 @@ from sqlalchemy import and_, func
 from socketio import AsyncServer
 from sockets_events import sio
 
-
-
 router = APIRouter()
+
+from auth import get_current_user
+from models.userModel import User
 
 class TaskCreate(BaseModel):
     description: str
 
 # Cria uma nova tarefa
 @router.post("/create")
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+def create_task(task: TaskCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     new_task = Task(description=task.description)
     db.add(new_task)
     db.commit()
@@ -30,7 +30,7 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
 
 # Apaga uma tarefa
 @router.delete("/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -41,7 +41,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
 
 # Lista todas as tarefas
 @router.get("/")
-def list_tasks(db: Session = Depends(get_db)):
+def list_tasks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Task).all()
 
 def get_streak_count(db: Session, user_id: int) -> int:
@@ -77,7 +77,7 @@ def get_streak_count(db: Session, user_id: int) -> int:
     return streak
 
 @router.post("/{task_id}/{user_id}/toggle")
-async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db)):
+async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -227,7 +227,7 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
 
 # Mostra as tarefas concluidas por um utilizador (excluindo as do dia atual)
 @router.get("/{user_id}/completed")
-def list_completed_tasks(user_id: int, db: Session = Depends(get_db)):
+def list_completed_tasks(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     today = date.today()
     start_of_day = datetime.combine(today, time.min)
     
@@ -253,7 +253,7 @@ def list_completed_tasks(user_id: int, db: Session = Depends(get_db)):
 
 # Mostra as tarefas diárias (de hoje) atribuídas a um utilizador
 @router.get("/{user_id}/dailystatus")
-def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db)):
+def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     today = date.today()
     start_of_day = datetime.combine(today, time.min)
     end_of_day = datetime.combine(today, time.max)
@@ -284,7 +284,7 @@ def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db)):
 
 # Mostra as tarefas não concluídas de um utilizador
 @router.get("/{user_id}/not_completed")
-def list_not_completed_tasks(user_id: int, db: Session = Depends(get_db)):
+def list_not_completed_tasks(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     tasks = (
         db.query(
             Task.id,
