@@ -11,6 +11,9 @@ from socketio import AsyncServer
 from sockets_events import sio
 import random
 
+from core.security import get_current_user
+from models.userModel import User
+
 router = APIRouter()
 
 class QuestionCreate(BaseModel):
@@ -23,7 +26,8 @@ class QuestionAnswer(BaseModel):
 
 # Cria uma pergunta
 @router.post("/create")
-def create_question(body: QuestionCreate, db: Session = Depends(get_db)):
+def create_question(body: QuestionCreate, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     new_question = Question(question=body.question)
     db.add(new_question)
     db.commit()
@@ -32,14 +36,16 @@ def create_question(body: QuestionCreate, db: Session = Depends(get_db)):
 
 # Lista todas as perguntas
 @router.get("/")
-def list_questions(db: Session = Depends(get_db)):
+def list_questions(db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     return db.query(Question).all()
 
 # Atribui a resposta de um utilizador a uma pergunta
 @router.post("/answer")
 def add_question_answer(
     body: List[QuestionAnswer] = Body(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     print("Received answers:", body)
     if not body:
@@ -63,7 +69,8 @@ def add_question_answer(
 
 # Atualiza a resposta de um utilizador a uma pergunta
 @router.put("/answer")
-async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db)):
+async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     answer = db.query(UserQuestionAnswer).filter_by(id_user=body.user_id, id_question=body.question_id).first()
     if not answer:
         raise HTTPException(status_code=404, detail="answer not found")
@@ -106,7 +113,8 @@ async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get
 
 # Lista as respostas de um utilizador
 @router.get("/{user_id}/answers")
-def list_user_answers(user_id: int, db: Session = Depends(get_db)):
+def list_user_answers(user_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     answers = (
         db.query(UserQuestionAnswer, Question)
         .join(Question, UserQuestionAnswer.id_question == Question.id)
@@ -120,7 +128,8 @@ def list_user_answers(user_id: int, db: Session = Depends(get_db)):
 
 # Dá uma pergunta que o utilizador ainda não respondeu
 @router.get("/{user_id}/random_unanswered")
-def random_unanswered_question(user_id: int, db: Session = Depends(get_db)):
+def random_unanswered_question(user_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     answered_question_ids = (
         db.query(UserQuestionAnswer.id_question)
         .filter(UserQuestionAnswer.id_user == user_id)
@@ -150,7 +159,8 @@ def random_unanswered_question(user_id: int, db: Session = Depends(get_db)):
 
 # Apaga uma pergunta
 @router.delete("/{question_id}")
-def delete_question(question_id: int, db: Session = Depends(get_db)):
+def delete_question(question_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     question = db.query(Question).filter_by(id=question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
