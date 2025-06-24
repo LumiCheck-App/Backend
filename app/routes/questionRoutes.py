@@ -85,7 +85,7 @@ async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get
     existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
         UserAchievementStatus.id_user == user_id,
         Achievement.tag == 'primeiropasso'
-    ).first()
+    ).first()   
 
     # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
     if not existing_achievement:

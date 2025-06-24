@@ -129,7 +129,7 @@ def delete_user(
     current_user: User = Depends(get_current_user)
 ):
     # Verificação de autorização
-    if int(current_user) != user_id:
+    if int(current_user.id) != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete your own account"
@@ -214,7 +214,7 @@ def delete_user(
 
 @router.get("/protected")
 def protected_route(current_user: User = Depends(get_current_user)):
-    return {"message": f"Hello, {current_user}!"}
+    return {"message": f"Hello, {current_user.id}!"}
 
 @router.put("/{user_id}")
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
