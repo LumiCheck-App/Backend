@@ -41,7 +41,7 @@ def list_screentime_entries(db: Session = Depends(get_db), current_user: User = 
     return db.query(ScreenTime).all()
 
 @router.get("/{user_id}")
-def get_user_screentime(user_id: int, db: Session = Depends(get_db)):
+def get_user_screentime(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     screentime_entries = db.query(ScreenTime).filter(ScreenTime.id_user == user_id).all()
     if not screentime_entries:
         raise HTTPException(status_code=404, detail="No screen time data found for this user")
