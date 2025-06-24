@@ -112,6 +112,24 @@ def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
     )
     return [{"id": achievement.id, "name": achievement.name, "description": achievement.description, "tag": achievement.tag, "image": achievement.image} for achievement in achievements]
 
+#Lista os trofeus bloqueados de um utilizador
+@router.get("/{user_id}/locked")
+def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
+    unlocked_achievements = (
+        db.query(Achievement)
+        .join(UserAchievementStatus, UserAchievementStatus.id_achievement == Achievement.id)
+        .filter(UserAchievementStatus.id_user == user_id, UserAchievementStatus.done == True)
+        .all()
+    )
+
+    achievements = (
+        db.query(Achievement)
+        .filter(Achievement.id.notin_([achievement.id for achievement in unlocked_achievements]))
+        .all()
+    )
+    return [{"id": achievement.id, "name": achievement.name, "description": achievement.description, "tag": achievement.tag, "image": achievement.image} for achievement in achievements]
+
+
 # Lista todos os trofeus (conquistados ou não) de um utilizador
 @router.get("/{user_id}/status")
 def list_achievements_with_status(user_id: int, db: Session = Depends(get_db)):
