@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from models.userModel import User
 from config import get_db
 from sqlalchemy.orm import Session
-from auth import SECRET_KEY, ALGORITHM
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
