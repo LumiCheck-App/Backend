@@ -110,7 +110,7 @@ def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db)):
         .filter(UserAchievementStatus.id_user == user_id, UserAchievementStatus.done == True)
         .all()
     )
-    return [{"id": achievement.id, "name": achievement.name, "description": achievement.description} for achievement in achievements]
+    return [{"id": achievement.id, "name": achievement.name, "description": achievement.description, "tag": achievement.tag, "image": achievement.image} for achievement in achievements]
 
 # Lista todos os trofeus (conquistados ou não) de um utilizador
 @router.get("/{user_id}/status")
