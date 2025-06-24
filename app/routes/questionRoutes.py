@@ -11,7 +11,7 @@ from socketio import AsyncServer
 from sockets_events import sio
 import random
 
-from core.security import get_current_user
+from auth import get_current_user
 from models.userModel import User
 
 router = APIRouter()
