@@ -7,6 +7,8 @@ from collections import defaultdict
 from config import get_db
 from pydantic import BaseModel
 from typing import Dict
+from models.achievementModel import UserAchievementStatus, Achievement
+from config import sio
 
 router = APIRouter()
 
@@ -15,10 +17,65 @@ from models.userModel import User
 
 class ScreenTimeCreate(BaseModel):
     id_user: int
-    usage_data: Dict  # JSON format
+    usage_data: Dict 
+
+def check_detox_status(usage_data: Dict) -> bool:
+    restricted_keywords = [
+        # Social media
+        "instagram", "facebook", "messenger", "twitter", "x", "snapchat", "tiktok", 
+        # Games
+        "clash", "minecraft", "fortnite", "brawl", "candy"
+        # Shopping
+        "amazon", "ebay", "aliexpress", "nike", "adidas", "shein", "temu", 
+        # Gambling/Casinos
+        "bet", "casino", "poker"
+    ]
+    
+    app_breakdown = usage_data.get("app_breakdown", {})
+    
+    for app_name, minutes in app_breakdown.items():
+        lower_app = app_name.lower()
+    
+        if any(keyword in lower_app for keyword in restricted_keywords):
+            if minutes > 10:
+                return False
+    return True
+
+def lumicheck_7_days(db: Session, user_id: int, current_usage: Dict) -> bool:
+    # Verifica se usou lumicheck hoje
+    app_breakdown = current_usage.get("app_breakdown", {})
+    used_today = any("lumicheck" in app.lower() for app in app_breakdown.keys())
+    
+    if not used_today:
+        return False
+    
+    # Verifica os últimos 6 dias
+    today = datetime.now().date()
+    for day_offset in range(1, 7): 
+        target_date = today - timedelta(days=day_offset)
+    
+        day_usage = db.query(ScreenTime).filter(
+            ScreenTime.id_user == user_id,
+            func.date(ScreenTime.timestamp) == target_date
+        ).first()
+        
+        if not day_usage:
+            return False
+            
+        day_apps = day_usage.usage_data.get("app_breakdown", {})
+        used_on_day = any("lumicheck" in app.lower() for app in day_apps.keys())
+        
+        if not used_on_day:
+            return False
+    
+    return True
+
+def less_than_4_hours(usage_data: Dict) -> bool:
+    total_minutes = usage_data.get("total_minutes", 0)
+    return total_minutes < 240
 
 @router.post("/")
-def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Check if the user exists
     user = db.query(User).filter(User.id == entry.id_user).first()
     if not user:
@@ -31,6 +88,90 @@ def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db), cu
         timestamp=func.now()
     )
     db.add(new_entry)
+
+    user_id = user.id
+
+    # Verifica se já tem o troféu
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'diadedetox'
+    ).first()   
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement and check_detox_status(entry.usage_data):
+        achievement = db.query(Achievement).filter_by(tag='diadedetox').first()
+        if achievement:
+            user_achievement = UserAchievementStatus(
+                id_user=user_id,
+                id_achievement=achievement.id,
+                done=True,
+                #achieved_at=datetime.now()
+            )
+            db.add(user_achievement)
+            await sio.emit(
+                'trophy_unlocked',
+                {
+                    "title": achievement.name,
+                    "description": achievement.description,
+                    "image": achievement.image
+                },
+                room=f"user_{user_id}"
+            )
+
+    # Verifica se já tem o troféu
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'autoconsciente'
+    ).first()   
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement and lumicheck_7_days(db, user_id, entry.usage_data):
+        achievement = db.query(Achievement).filter_by(tag='autoconsciente').first()
+        if achievement:
+            user_achievement = UserAchievementStatus(
+                id_user=user_id,
+                id_achievement=achievement.id,
+                done=True,
+                #achieved_at=datetime.now()
+            )
+            db.add(user_achievement)
+            await sio.emit(
+                'trophy_unlocked',
+                {
+                    "title": achievement.name,
+                    "description": achievement.description,
+                    "image": achievement.image
+                },
+                room=f"user_{user_id}"
+            )
+
+    # Verifica se já tem o troféu
+    existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
+        UserAchievementStatus.id_user == user_id,
+        Achievement.tag == 'horaderecolher'
+    ).first()   
+
+    # Se o utilizador completar os requisitos e não tiver o troféu, atribui-o
+    if not existing_achievement and less_than_4_hours(entry.usage_data):
+        achievement = db.query(Achievement).filter_by(tag='horaderecolher').first()
+        if achievement:
+            user_achievement = UserAchievementStatus(
+                id_user=user_id,
+                id_achievement=achievement.id,
+                done=True,
+                #achieved_at=datetime.now()
+            )
+            db.add(user_achievement)
+            await sio.emit(
+                'trophy_unlocked',
+                {
+                    "title": achievement.name,
+                    "description": achievement.description,
+                    "image": achievement.image
+                },
+                room=f"user_{user_id}"
+            )
+
     db.commit()
     db.refresh(new_entry)
 
