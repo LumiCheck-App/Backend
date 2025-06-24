@@ -98,8 +98,8 @@ def login(requestUser: RequestUser, db: Session = Depends(get_db)):
         "user": user
     }
 
-# Novo endpoint para o Swagger UI (mesma rota, mas aceita form-data)
-@router.post("/login", include_in_schema=False)
+# Novo endpoint caso o Swagger UI não dê no outro (mesma rota, mas aceita form-data)
+@router.post("/login", summary="Login com username e password (form-data)")
 def login_swagger_ui(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
