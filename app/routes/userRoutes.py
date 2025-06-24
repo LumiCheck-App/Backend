@@ -99,7 +99,7 @@ def login(requestUser: RequestUser, db: Session = Depends(get_db)):
     }
 
 # Novo endpoint para o Swagger UI (mesma rota, mas aceita form-data)
-@router.post("/user/login", include_in_schema=False)
+@router.post("/login", include_in_schema=False)
 def login_swagger_ui(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
