@@ -42,7 +42,7 @@ def list_questions(db: Session = Depends(get_db),
 
 # Atribui a resposta de um utilizador a uma pergunta
 @router.post("/answer")
-def add_question_answer(
+async def add_question_answer(
     body: List[QuestionAnswer] = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -63,23 +63,7 @@ def add_question_answer(
         )
         db.add(db_answer)
 
-    db.commit()
-    return {"message": f"{len(body)} answer(s) successfully added"}
-
-
-# Atualiza a resposta de um utilizador a uma pergunta
-@router.put("/answer")
-async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)):
-    answer = db.query(UserQuestionAnswer).filter_by(id_user=body.user_id, id_question=body.question_id).first()
-    if not answer:
-        raise HTTPException(status_code=404, detail="answer not found")
-    
-    if not (0 <= body.answer <= 5):
-        raise HTTPException(status_code=400, detail="Answer must be between 0 and 5")
-    
-    answer.answer = body.answer
-    user_id = body.user_id
+    user_id = body[0].user_id
 
     # Verifica se já tem o troféu
     existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
@@ -107,6 +91,23 @@ async def update_question_answer(body: QuestionAnswer, db: Session = Depends(get
                 },
                 room=f"user_{user_id}"
             )
+
+    db.commit()
+    return {"message": f"{len(body)} answer(s) successfully added"}
+
+
+# Atualiza a resposta de um utilizador a uma pergunta
+@router.put("/answer")
+def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
+    answer = db.query(UserQuestionAnswer).filter_by(id_user=body.user_id, id_question=body.question_id).first()
+    if not answer:
+        raise HTTPException(status_code=404, detail="answer not found")
+    
+    if not (0 <= body.answer <= 5):
+        raise HTTPException(status_code=400, detail="Answer must be between 0 and 5")
+    
+
 
     db.commit()
     return {"message": "Question status successfully updated"}
