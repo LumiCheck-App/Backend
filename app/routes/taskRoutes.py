@@ -22,6 +22,12 @@ class TaskCreate(BaseModel):
 # Cria uma nova tarefa
 @router.post("/create")
 def create_task(task: TaskCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Cria uma nova tarefa no sistema.
+
+    Corpo da requisição (JSON):
+    - `description`: Texto descritivo da tarefa a ser adicionada
+    """
     new_task = Task(description=task.description)
     db.add(new_task)
     db.commit()
@@ -31,6 +37,14 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db), current_user: U
 # Apaga uma tarefa
 @router.delete("/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Apaga uma tarefa com base no seu ID.
+
+    Parâmetro:
+    - `task_id`: ID da tarefa a remover
+
+    A tarefa será removida permanentemente. Retorna erro 404 se a tarefa não existir.
+    """
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -42,6 +56,9 @@ def delete_task(task_id: int, db: Session = Depends(get_db), current_user: User 
 # Lista todas as tarefas
 @router.get("/")
 def list_tasks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todas as tarefas existentes na app.
+    """
     return db.query(Task).all()
 
 def get_streak_count(db: Session, user_id: int) -> int:
@@ -78,6 +95,19 @@ def get_streak_count(db: Session, user_id: int) -> int:
 
 @router.post("/{task_id}/{user_id}/toggle")
 async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Altera o estado de conclusão de uma tarefa diária de um utilizador.
+
+    Parâmetros:
+    - `task_id`: ID da tarefa
+    - `user_id`: ID do utilizador
+
+    Além de atualizar o estado da tarefa, este endpoint também verifica e atribui os seguintes troféus:
+    - `marcodos20`: 20 tarefas concluídas no total
+    - `dedicado`: 7 dias consecutivos com pelo menos uma tarefa concluída
+    - `perfecionista`: 14 dias consecutivos com tarefas concluídas
+    - `modozen`: 30 dias consecutivos com tarefas concluídas
+    """
     task = db.query(Task).filter_by(id=task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -228,6 +258,14 @@ async def toggle_task_completion(task_id: int, user_id: int, db: Session = Depen
 # Mostra as tarefas concluidas por um utilizador (excluindo as do dia atual)
 @router.get("/{user_id}/completed")
 def list_completed_tasks(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todas as tarefas concluídas por um utilizador, excluindo as realizadas no dia.
+
+    Parâmetro:
+    - `user_id`: ID do utilizador
+
+    Retorna uma lista com as tarefas finalizadas antes de hoje, incluindo a data de conclusão.
+    """
     today = date.today()
     start_of_day = datetime.combine(today, time.min)
     
@@ -254,6 +292,17 @@ def list_completed_tasks(user_id: int, db: Session = Depends(get_db), current_us
 # Mostra as tarefas diárias (de hoje) atribuídas a um utilizador
 @router.get("/{user_id}/dailystatus")
 def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todas as tarefas atribuídas ao utilizador no dia atual, incluindo o seu estado.
+
+    Parâmetro:
+    - `user_id`: ID do utilizador
+
+    A resposta contém:
+    - `id`: ID da tarefa
+    - `description`: Texto da tarefa
+    - `done`: Booleano indicando se foi concluída
+    """
     today = date.today()
     start_of_day = datetime.combine(today, time.min)
     end_of_day = datetime.combine(today, time.max)
@@ -285,6 +334,12 @@ def list_today_tasks_with_status(user_id: int, db: Session = Depends(get_db), cu
 # Mostra as tarefas não concluídas de um utilizador
 @router.get("/{user_id}/not_completed")
 def list_not_completed_tasks(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todas as tarefas atribuídas a um utilizador que ainda não foram concluídas.
+
+    Parâmetro:
+    - `user_id`: ID do utilizador
+    """
     tasks = (
         db.query(
             Task.id,

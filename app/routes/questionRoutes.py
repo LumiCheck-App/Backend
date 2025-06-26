@@ -28,6 +28,12 @@ class QuestionAnswer(BaseModel):
 @router.post("/create")
 def create_question(body: QuestionCreate, db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Permite adicionar uma pergunta que será posteriormente respondida pelos utilizadores.
+
+    Corpo da requisição (JSON):
+    - `question`: Texto da pergunta
+    """
     new_question = Question(question=body.question)
     db.add(new_question)
     db.commit()
@@ -38,6 +44,9 @@ def create_question(body: QuestionCreate, db: Session = Depends(get_db),
 @router.get("/")
 def list_questions(db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Retorna uma lista com todas as perguntas, independentemente de estarem respondidas ou não.
+    """
     return db.query(Question).all()
 
 # Atribui a resposta de um utilizador a uma pergunta
@@ -47,6 +56,17 @@ async def add_question_answer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Regista respostas de um utilizador a uma ou mais perguntas.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador que respondeu
+    - `question_id`: ID da pergunta
+    - `answer`: Valor de resposta (de 0 a 5)
+
+    Além de guardar as respostas, este endpoint também atribui o troféu com `tag='primeiropasso'`
+    caso o utilizador ainda não o tenha.
+    """
     print("Received answers:", body)
     if not body:
         raise HTTPException(status_code=400, detail="No answers provided")
@@ -100,6 +120,14 @@ async def add_question_answer(
 @router.put("/answer")
 def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Atualiza a resposta dada por um utilizador a uma pergunta específica.
+
+    Corpo da requisição (JSON):
+    - `user_id`: ID do utilizador
+    - `question_id`: ID da pergunta
+    - `answer`: Nova resposta (de 0 a 5)
+    """
     answer = db.query(UserQuestionAnswer).filter_by(id_user=body.user_id, id_question=body.question_id).first()
     if not answer:
         raise HTTPException(status_code=404, detail="answer not found")
@@ -116,6 +144,14 @@ def update_question_answer(body: QuestionAnswer, db: Session = Depends(get_db),
 @router.get("/{user_id}/answers")
 def list_user_answers(user_id: int, db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Lista todas as respostas dadas por um utilizador.
+
+    Cada item da resposta inclui:
+    - `question_id`: ID da pergunta
+    - `question`: Texto da pergunta
+    - `answer`: Resposta atribuída pelo utilizador
+    """
     answers = (
         db.query(UserQuestionAnswer, Question)
         .join(Question, UserQuestionAnswer.id_question == Question.id)
@@ -131,6 +167,14 @@ def list_user_answers(user_id: int, db: Session = Depends(get_db),
 @router.get("/{user_id}/random_unanswered")
 def random_unanswered_question(user_id: int, db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Retorna uma pergunta aleatória que o utilizador ainda não respondeu.
+
+    Resposta inclui:
+    - `question_id`: ID da pergunta
+    - `question`: Texto da pergunta
+    - `total_unanswered`: Número total de perguntas ainda não respondidas pelo utilizador
+    """
     answered_question_ids = (
         db.query(UserQuestionAnswer.id_question)
         .filter(UserQuestionAnswer.id_user == user_id)
@@ -162,6 +206,14 @@ def random_unanswered_question(user_id: int, db: Session = Depends(get_db),
 @router.delete("/{question_id}")
 def delete_question(question_id: int, db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
+    """
+    Elimina uma pergunta do sistema.
+
+    Parâmetro:
+    - `question_id`: ID da pergunta a eliminar
+
+    Apaga permanentemente a pergunta. Se a pergunta não existir, retorna erro 404.
+    """
     question = db.query(Question).filter_by(id=question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
