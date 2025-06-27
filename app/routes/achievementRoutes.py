@@ -14,6 +14,7 @@ from sockets_events import sio
 from datetime import datetime, timedelta
 from sqlalchemy import and_, func
 from models.taskStatusModel import UserTaskStatus
+from fastapi import Query, Path, Body
 
 router = APIRouter()
 
@@ -29,11 +30,31 @@ class AchievementCreate(BaseModel):
 # Lista os trofeus
 @router.get("/")
 def list_achievements(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna uma lista com todos os troféus definidos, independentemente do estado do progresso do utilizador. 
+
+    Cada elemento da lista inclui os seguintes campos:
+    - `id`: Identificador único do troféu
+    - `name`: Nome do troféu
+    - `description`: Descrição do objetivo ou significado do troféu
+    - `tag`: Etiqueta interna de referência (ex: 'modozen')
+    - `image`: URL opcional da imagem associada ao troféu
+    """
     return db.query(Achievement).all()
 
 # Cria um novo trofeu
 @router.post("/create")
 def create_achievement(achievement_data: AchievementCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Permite a criação de um novo troféu com nome, descrição, etiqueta (tag) e imagem opcional.
+    A `tag` deve ser única e serve como identificador interno para lógicas de progresso específicas.
+
+    Parâmetros:
+    - `name`: Nome do troféu
+    - `description`: Descrição visível ao utilizador
+    - `tag`: Etiqueta única de referência
+    - `image`: (opcional) URL de imagem
+    """
     new_achievement = Achievement(name=achievement_data.name, description=achievement_data.description, tag=achievement_data.tag, image=achievement_data.image)
     db.add(new_achievement)
     db.commit()
@@ -43,6 +64,19 @@ def create_achievement(achievement_data: AchievementCreate, db: Session = Depend
 # Atualiza um trofeu
 @router.put("/{achievement_id}")
 def update_achievement(achievement_id: int, name: str = None, description: str = None, tag: str = None, image: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Permite modificar um ou mais campos de um troféu com base no seu `ID`.
+    Apenas os campos fornecidos na query serão atualizados.
+
+    Parâmetros obrigatórios:
+    - `achievement_id`: ID do troféu a ser atualizado
+
+    Parâmetros opcionais:
+    - `name`: Novo nome
+    - `description`: Nova descrição
+    - `tag`: Nova etiqueta
+    - `image`: Nova imagem
+    """
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
@@ -63,6 +97,12 @@ def update_achievement(achievement_id: int, name: str = None, description: str =
 # Apaga um trofeu
 @router.delete("/{achievement_id}")
 def delete_achievement(achievement_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Apaga permanentemente o troféu identificado, se este existir, sendo esta uma operação irreversível.
+
+    Parâmetros:
+    - `achievement_id`: ID do troféu a eliminar
+    """
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
@@ -74,6 +114,13 @@ def delete_achievement(achievement_id: int, db: Session = Depends(get_db), curre
 # Associa um trofeu a um utilizador
 @router.post("/{user_id}/{achievement_id}/unlock")
 async def unlock_achievement(user_id: int, achievement_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Marca um troféu como desbloqueado para um determinado utilizador e aciona um evento via WebSocket para notificar a interface.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+    - `achievement_id`: ID do troféu a desbloquear
+    """
     #Verifica se o troféu existe
     achievement = db.query(Achievement).filter_by(id=achievement_id).first()
     if not achievement:
@@ -110,6 +157,12 @@ async def unlock_achievement(user_id: int, achievement_id: int, db: Session = De
 #Lista os trofeus desbloqueados por um utilizador
 @router.get("/{user_id}/unlocked")
 def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna os troféus que o utilizador já conquistou, com os respetivos detalhes.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+    """
     achievements = (
         db.query(Achievement)
         .join(UserAchievementStatus, UserAchievementStatus.id_achievement == Achievement.id)
@@ -121,6 +174,12 @@ def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db), curr
 #Lista os trofeus bloqueados de um utilizador
 @router.get("/{user_id}/locked")
 def list_unlocked_achievements(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna os troféus que o utilizador ainda não desbloqueou.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+    """
     unlocked_achievements = (
         db.query(Achievement)
         .join(UserAchievementStatus, UserAchievementStatus.id_achievement == Achievement.id)
@@ -172,6 +231,15 @@ def get_streak_count(db: Session, user_id: int) -> int:
 # Função auxiliar para obter o número de tarefas concluídas consecutivas
 @router.get("/{user_id}/checkModoZen")
 def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Verifica o progresso do utilizador para desbloquear ao troféu 'Modo Zen'.
+
+    Este troféu é desbloqueado após o utilizador completar 30 dias consecutivos de tarefas.
+    A resposta inclui o estado atual (desbloqueado ou não), o progresso e os dados do troféu.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+    """
     existing_achievement = db.query(UserAchievementStatus).join(Achievement).filter(
         UserAchievementStatus.id_user == user_id,
         Achievement.tag == 'modozen'
@@ -210,6 +278,14 @@ def check_modo_zen_progress(user_id: int, db: Session = Depends(get_db), current
 # Lista todos os trofeus (conquistados ou não) de um utilizador
 @router.get("/{user_id}/status")
 def list_achievements_with_status(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todos os troféus com o respetivo estado (desbloqueado ou não) para um utilizador.
+
+    Cada troféu é devolvido com um campo booleano `unlocked` que indica se o utilizador já o conquistou.
+
+    Parâmetro:
+    - `user_id`: ID do utilizador
+    """
     achievements = (
         db.query(
             Achievement.id,

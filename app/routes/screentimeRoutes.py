@@ -7,8 +7,9 @@ from collections import defaultdict
 from config import get_db
 from pydantic import BaseModel
 from typing import Dict
-from models.achievementModel import UserAchievementStatus, Achievement
-from config import sio
+from models.achievementModel import Achievement
+from models.achievementStatusModel import UserAchievementStatus
+from sockets_events import sio
 
 router = APIRouter()
 
@@ -76,6 +77,20 @@ def less_than_4_hours(usage_data: Dict) -> bool:
 
 @router.post("/")
 async def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Regista uma nova entrada de tempo de ecrã para um utilizador.
+
+    Corpo da requisição (JSON):
+    - `id_user`: ID do utilizador
+    - `usage_data`: Dicionário com os dados dp tempo de ecrã, incluindo `app_breakdown` e `total_minutes`
+
+    Este endpoint:
+    - Guarda a entrada atual
+    - Verifica se o utilizador cumpre critérios para desbloquear troféus:
+        - `diadedetox`: Evitou apps restritos por mais de 10 minutos
+        - `autoconsciente`: Usou o app LumiCheck durante 7 dias consecutivos
+        - `horaderecolher`: Usou o telemóvel menos de 4 horas no dia
+    """
     # Check if the user exists
     user = db.query(User).filter(User.id == entry.id_user).first()
     if not user:
@@ -179,10 +194,21 @@ async def create_screentime(entry: ScreenTimeCreate, db: Session = Depends(get_d
 
 @router.get("/")
 def list_screentime_entries(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna todas as entradas de tempo de ecrã registadas no sistema.
+    """
     return db.query(ScreenTime).all()
 
 @router.get("/{user_id}")
 def get_user_screentime(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna todas as entradas de tempo de ecrã associadas a um determinado utilizador.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+
+    Retorna uma lista com os registos de tempo de ecrã. Se o utilizador não tiver registos, retorna erro 404.
+    """
     screentime_entries = db.query(ScreenTime).filter(ScreenTime.id_user == user_id).all()
     if not screentime_entries:
         raise HTTPException(status_code=404, detail="No screen time data found for this user")
@@ -191,6 +217,12 @@ def get_user_screentime(user_id: int, db: Session = Depends(get_db), current_use
 
 @router.delete("/{entry_id}")
 def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Apaga uma entrada do tempo de ecrã com base no ID. Esta operação é irreversível.
+
+    Parâmetros:
+    - `entry_id`: ID da entrada a apagar
+    """
     entry = db.query(ScreenTime).filter(ScreenTime.id == entry_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Screen time entry not found")
@@ -201,6 +233,18 @@ def delete_screentime_entry(entry_id: int, db: Session = Depends(get_db), curren
 
 @router.get("/last7days/{user_id}")
 def get_last_7days_screentime(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Obtém os dados do tempo de ecrã dos últimos 7 dias de um utilizador.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+
+    Retorna uma lista com objetos que contêm:
+    - `date`: Data no formato `dd/mm`
+    - `total_minutes`: Tempo total de ecrã nesse dia
+
+    Útil para construir gráficos de evolução do tempo de ecrã na interface da aplicação.
+    """
     # Verificar se o usuário existe
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

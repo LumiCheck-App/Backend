@@ -49,6 +49,17 @@ def register(
     user_data: RegisterUser,  # Agora espera um JSON
     db: Session = Depends(get_db)
 ):
+    """
+    Regista um novo utilizador no sistema.
+
+    Campos do JSON:
+    - `username`: Nome de utilizador (único)
+    - `email`: Endereço de email (único)
+    - `password`: Palavra-passe
+    - `onboarding`: (opcional) Flag para estado inicial da onboarding
+
+    Verifica se o `email` e `username` já existem antes de criar o utilizador. Atribui tarefas iniciais automaticamente.
+    """
     # Verifica se o email já existe
     existing_email = db.query(User).filter(
         (User.email == user_data.email)
@@ -83,6 +94,15 @@ def register(
 
 @router.post("/login")
 def login(requestUser: RequestUser, db: Session = Depends(get_db)):
+    """
+    Realiza o login de um utilizador com base no nome de utilizador e palavra-passe.
+
+    Campos esperados:
+    - `username`
+    - `password`
+
+    Retorna um token de acesso (`access_token`), um token de renovação (`refresh_token`) e os dados do utilizador.
+    """
     user = db.query(User).filter(User.username == requestUser.username).first()
     if not user or not verify_password(requestUser.password, user.password):
         raise HTTPException(status_code=401, detail="Username ou password incorretos")
@@ -100,6 +120,14 @@ def login(requestUser: RequestUser, db: Session = Depends(get_db)):
 
 @router.post("/refresh")
 async def refresh_token(request: Request):
+    """
+    Gera um novo token de acesso a partir de um `refresh_token` válido.
+
+    Corpo da requisição:
+    - `refresh_token`: Token de renovação JWT previamente obtido
+
+    Se o token for válido, retorna um novo `access_token`.
+    """
     try:
         body = await request.json()
         refresh_token = body.get("refresh_token")
@@ -116,6 +144,9 @@ async def refresh_token(request: Request):
 
 @router.get("/")
 def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Lista todos os utilizadores registados.
+    """
     return db.query(User).all()
 
 class DeleteUserRequest(BaseModel):
@@ -128,6 +159,19 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Elimina completamente a conta de um utilizador.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador a eliminar
+
+    Corpo da requisição:
+    - `password`: Palavra-passe do utilizador (para confirmação)
+
+    Antes de eliminar:
+    - Verifica se o utilizador autenticado é o mesmo
+    - Remove todos os dados relacionados (tarefas, respostas, hábitos, etc.)
+    """
     if int(current_user.id) != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -181,10 +225,24 @@ def delete_user(
 
 @router.get("/protected")
 def protected_route(current_user: User = Depends(get_current_user)):
+    """
+    Rota protegida para verificar se o token JWT é válido.
+
+    Retorna uma mensagem com o ID do utilizador autenticado.
+    """
     return {"message": f"Hello, {current_user.id}!"}
 
 @router.put("/{user_id}")
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Atualiza os dados do perfil de um utilizador.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador a atualizar
+
+    Corpo da requisição pode conter:
+    - `username`, `email`, `password`, `onboarding`, `firebase_token`, `is_monitoring`
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -216,6 +274,19 @@ def update_user_credentials(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """
+    Atualiza o username ou email do utilizador autenticado, após confirmação da palavra-passe atual.
+
+    Parâmetros:
+    - `user_id`: ID do utilizador
+
+    Corpo da requisição:
+    - `current_password`: Palavra-passe atual
+    - `new_username`: (opcional) Novo username
+    - `new_email`: (opcional) Novo email
+
+    Valida se os novos valores já estão em uso antes de atualizar.
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
